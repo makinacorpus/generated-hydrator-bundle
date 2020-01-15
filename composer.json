@@ -1,0 +1,32 @@
+{
+    "name": "makinacorpus/generated-hydrator-bundle",
+    "description": "Provide integration of ocramius/generated-hydrator for Symfony",
+    "type": "library",
+    "license": "MIT",
+    "authors": [{
+        "name": "Pierre Rineau",
+        "email": "pierre.rineau@makina-corpus.com"
+    }],
+    "require": {
+        "ocramius/generated-hydrator": "^3.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^8.5",
+        "symfony/dependency-injection": "^4.4 || ^5.0",
+        "symfony/filesystem": "^4.4 || ^5.0",
+        "symfony/http-kernel": "^4.4 || ^5.0",
+        "symfony/property-info": "^4.4 || ^5.0",
+        "symfony/config": "^4.4 || ^5.0",
+        "symfony/yaml": "^4.4 || ^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "GeneratedHydrator\\Bridge\\Symfony\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "GeneratedHydrator\\Bridge\\Symfony\\Tests\\": "tests/"
+        }
+    }
+}

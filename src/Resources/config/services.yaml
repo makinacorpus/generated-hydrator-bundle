@@ -1,0 +1,41 @@
+services:
+
+    # Only existing implementation for now
+    generated_hydrator.hydration_plan_builder.reflection:
+        public: false
+        class: GeneratedHydrator\Bridge\Symfony\HydrationPlan\ReflectionHydrationPlanBuilder
+
+    # This might be replaced by a chain implementation
+    generated_hydrator.hydration_plan_builder.default:
+        alias: generated_hydrator.hydration_plan_builder.reflection
+
+    # Hydration builder cache (hides the default one)
+    generated_hydrator.hydration_plan_builder.cache:
+        public: false
+        class: GeneratedHydrator\Bridge\Symfony\HydrationPlan\CachedHydrationPlanBuilder
+        arguments: ['@generated_hydrator.hydration_plan_builder.default', '@cache.app']
+
+    # Facade for hydration plan builder (holds the cached implementation)
+    generated_hydrator.hydration_plan_builder:
+        public: false
+        alias: generated_hydrator.hydration_plan_builder.cache
+
+    # Default hydrator implementation
+    generated_hydrator.default:
+        public: false
+        class: GeneratedHydrator\Bridge\Symfony\DefaultHydrator
+        arguments: ["%kernel.cache_dir%", [], 'cache']
+
+    # Deep hydrator implementation
+    generated_hydrator.deep:
+        public: false
+        class: GeneratedHydrator\Bridge\Symfony\DeepHydrator
+        arguments: ["@generated_hydrator.default", '@generated_hydrator.hydration_plan_builder']
+
+    # Main public facade, please use this service for injection.
+    generated_hydrator:
+        alias: generated_hydrator.deep
+
+    # Alias for argument resolvers
+    GeneratedHydrator\Bridge\Symfony\Hydrator:
+        alias: generated_hydrator
