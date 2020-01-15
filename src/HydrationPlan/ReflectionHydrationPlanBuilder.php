@@ -242,7 +242,7 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
     private function findPropertyWithRawDocBlock(string $className, string $propertyName, \ReflectionProperty $property): array
     {
         if (!$docBlock = $property->getDocComment()) {
-            return null;
+            return [];
         }
 
         // Arbitrary take the first, sorry.
@@ -296,7 +296,7 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
     private function findPropertyDefinition(string $className, string $propertyName, \ReflectionProperty $property): array
     {
         if ($ret = $this->findPropertyWithReflection($className, $propertyName, $property)) {
-            return $ret;
+            return [$ret];
         }
         if ($ret = $this->findPropertyWithRawDocBlock($className, $propertyName, $property)) {
             return $ret;
