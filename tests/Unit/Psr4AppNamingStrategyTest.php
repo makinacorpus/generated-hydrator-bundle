@@ -27,52 +27,46 @@ final class Psr4AppNamingStrategyTest extends TestCase
 {
     public function testNormalUseCase(): void
     {
-        $configuration = new Psr4Configuration('var/www/my-app/src', 'MyVendor\\MyApp');
+        $configuration = new Psr4Configuration('/var/www/my-app/src', 'MyVendor\\MyApp');
         $classNameInflector = $configuration->getClassNameInflector();
         $fileLocator = $configuration->getFileLocator();
 
         $entityClass = 'MyVendor\\MyApp\\Domain\\Model\\SomeEntity';
 
-        self::markTestIncomplete();
+        $hydratorClassName = $classNameInflector->getGeneratedClassName($entityClass);
+        self::assertSame('MyVendor\\MyApp\\Hydrator\\Domain\\Model\\SomeEntityHydrator', $hydratorClassName);
 
-        $classname = $classNameInflector->getGeneratedClassName($entityClass);
-        self::assertSame('MyVendor\\MyApp\\Hydrator\\Domain\\Model\\SomeEntityHydrator', $classname);
-
-        $filename = $fileLocator->getGeneratedClassFileName($entityClass);
+        $filename = $fileLocator->getGeneratedClassFileName($hydratorClassName);
         self::assertSame('/var/www/my-app/src/Hydrator/Domain/Model/SomeEntityHydrator.php', $filename);
     }
 
     public function testWithDiffentSuffixAndInfix(): void
     {
-        $configuration = new Psr4Configuration('var/www/my-app/src', 'MyVendor\\MyApp', 'Bar');
+        $configuration = new Psr4Configuration('/var/www/my-app/src', 'MyVendor\\MyApp', 'Bar');
         $classNameInflector = $configuration->getClassNameInflector();
         $fileLocator = $configuration->getFileLocator();
 
         $entityClass = 'MyVendor\\MyApp\\Domain\\Model\\SomeEntity';
 
-        self::markTestIncomplete();
+        $hydratorClassName = $classNameInflector->getGeneratedClassName($entityClass);
+        self::assertSame('MyVendor\\MyApp\\Bar\\Domain\\Model\\SomeEntityHydrator', $hydratorClassName);
 
-        $classname = $classNameInflector->getGeneratedClassName($entityClass);
-        self::assertSame('MyVendor\\MyApp\\Bar\\Domain\\Model\\SomeEntityHydrator', $classname);
-
-        $filename = $fileLocator->getGeneratedClassFileName($entityClass);
+        $filename = $fileLocator->getGeneratedClassFileName($hydratorClassName);
         self::assertSame('/var/www/my-app/src/Bar/Domain/Model/SomeEntityHydrator.php', $filename);
     }
 
     public function testWithNoInfix(): void
     {
-        $configuration = new Psr4Configuration('var/www/my-app/src', 'MyVendor\\MyApp', null);
+        $configuration = new Psr4Configuration('/var/www/my-app/src', 'MyVendor\\MyApp', null);
         $classNameInflector = $configuration->getClassNameInflector();
         $fileLocator = $configuration->getFileLocator();
 
         $entityClass = 'MyVendor\\MyApp\\Domain\\Model\\SomeEntity';
 
-        self::markTestIncomplete();
+        $hydratorClassName = $classNameInflector->getGeneratedClassName($entityClass);
+        self::assertSame('MyVendor\\MyApp\\Domain\\Model\\SomeEntityHydrator', $hydratorClassName);
 
-        $classname = $classNameInflector->getGeneratedClassName($entityClass);
-        self::assertSame('MyVendor\\MyApp\\Domain\\Model\\SomeEntity', $classname);
-
-        $filename = $fileLocator->getGeneratedClassFileName($entityClass);
-        self::assertSame('/var/www/my-app/src/Domain/Model/SomeEntity.php', $filename);
+        $filename = $fileLocator->getGeneratedClassFileName($hydratorClassName);
+        self::assertSame('/var/www/my-app/src/Domain/Model/SomeEntityHydrator.php', $filename);
     }
 }

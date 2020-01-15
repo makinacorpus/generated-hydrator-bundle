@@ -21,6 +21,7 @@ declare(strict_types=1);
 namespace GeneratedHydrator\Bridge\Symfony\Utils\Inflector;
 
 use CodeGenerationUtils\Inflector\ClassNameInflectorInterface;
+use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Configuration;
 
 /**
  * @see \GeneratedHydrator\Bridge\Symfony\Utils\Psr4Configuration
@@ -36,7 +37,7 @@ final class Psr4ClassNameInflector implements ClassNameInflectorInterface
     /**
      * Default constructor.
      */
-    public function __construct(string $psr4NamespacePrefix, ?string $namespaceInfix = self::NAMESPACE_INFIX_DEFAULT)
+    public function __construct(string $psr4NamespacePrefix, ?string $namespaceInfix = null)
     {
         $this->psr4NamespacePrefix = $psr4NamespacePrefix;
         $this->namespaceInfix = $namespaceInfix;
@@ -47,12 +48,12 @@ final class Psr4ClassNameInflector implements ClassNameInflectorInterface
      */
     public function getGeneratedClassName(string $className, array $options = []): string
     {
-        // @todo
-        //   - check if class in namespace
-        //   - remove namespace, add infix, restore trailing namespace
-        //   - add class name suffix, configurable ?
-        //   - if not in the same namespace, raise error?
-        throw new \Exception("Not implemented yet");
+        $classNameSuffix = Psr4Configuration::getClassSuffixInNamespace($className, $this->psr4NamespacePrefix);
+
+        if ($this->namespaceInfix) {
+            return $this->psr4NamespacePrefix . '\\' . $this->namespaceInfix . '\\' . $classNameSuffix . 'Hydrator';
+        }
+        return $this->psr4NamespacePrefix . '\\' . $classNameSuffix . 'Hydrator';
     }
 
     /**

@@ -84,6 +84,21 @@ final class Psr4Configuration
     }
 
     /**
+     * From the given namespace prefix, find class name suffix (after the prefix).
+     */
+    public static function getClassSuffixInNamespace(string $className, string $namespacePrefix): string
+    {
+        $className = \trim($className, '\\');
+
+        $namespaceLength = \strlen($namespacePrefix);
+        if (\substr($className, 0, $namespaceLength) !== $namespacePrefix) {
+            throw new \InvalidArgumentException(\sprintf("Class '%s' is not in namespace '%s'", $className, $namespacePrefix));
+        }
+
+        return \substr($className, $namespaceLength + 1);
+    }
+
+    /**
      * Get class name inflector
      */
     public function getClassNameInflector(): ClassNameInflectorInterface
@@ -99,7 +114,7 @@ final class Psr4Configuration
     public function getFileLocator(): FileLocatorInterface
     {
         return $this->fileLocator ?? (
-            $this->fileLocator = new Psr4FileLocator($this->psr4NamespacePrefix, $this->psr4DirectoryRoot)
+            $this->fileLocator = new Psr4FileLocator($this->psr4DirectoryRoot, $this->psr4NamespacePrefix)
         );
     }
 }
