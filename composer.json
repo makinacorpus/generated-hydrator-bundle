@@ -7,16 +7,21 @@
         "name": "Pierre Rineau",
         "email": "pierre.rineau@makina-corpus.com"
     }],
+    "config": {
+        "sort-packages": true
+    },
     "require": {
+        "php": "^7.4",
         "ocramius/generated-hydrator": "^3.0"
     },
     "require-dev": {
+        "infection/infection": "^0.15.0",
         "phpunit/phpunit": "^8.5",
+        "symfony/config": "^4.4 || ^5.0",
         "symfony/dependency-injection": "^4.4 || ^5.0",
         "symfony/filesystem": "^4.4 || ^5.0",
         "symfony/http-kernel": "^4.4 || ^5.0",
         "symfony/property-info": "^4.4 || ^5.0",
-        "symfony/config": "^4.4 || ^5.0",
         "symfony/yaml": "^4.4 || ^5.0"
     },
     "autoload": {
