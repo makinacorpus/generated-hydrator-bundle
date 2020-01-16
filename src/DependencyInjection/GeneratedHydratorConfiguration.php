@@ -20,8 +20,9 @@ declare(strict_types=1);
 
 namespace GeneratedHydrator\Bridge\Symfony\DependencyInjection;
 
-use Symfony\Component\Config\Definition\Builder\TreeBuilder;
+use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Factory;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 
 final class GeneratedHydratorConfiguration implements ConfigurationInterface
 {
@@ -31,11 +32,24 @@ final class GeneratedHydratorConfiguration implements ConfigurationInterface
     public function getConfigTreeBuilder()
     {
         $treeBuilder = new TreeBuilder('generated-hydrator');
-        /*
         $rootNode = $treeBuilder->getRootNode();
 
         $rootNode
             ->children()
+                ->enumNode('mode')
+                    ->values(['psr-4', 'cache'])
+                    ->defaultValue('psr4')
+                ->end()
+                ->scalarNode('psr4_namespace_prefix')
+                    ->defaultValue('App')
+                ->end()
+                ->scalarNode('psr4_namespace_infix')
+                    ->defaultValue(Psr4Factory::NAMESPACE_INFIX_DEFAULT)
+                ->end()
+                ->scalarNode('psr4_source_directory')
+                    ->defaultValue("%kernel.project_dir%/src")
+                ->end()
+                /*
                 ->arrayNode('runner')
                     ->normalizeKeys(true)
                     ->prototype('array')
@@ -113,9 +127,9 @@ final class GeneratedHydratorConfiguration implements ConfigurationInterface
                         ->variableNode('aliases')->end()
                     ->end()
                 ->end()
+                 */
             ->end()
         ;
-         */
 
         return $treeBuilder;
     }

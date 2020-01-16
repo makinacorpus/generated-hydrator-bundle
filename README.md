@@ -3,6 +3,7 @@
 Integrates [ocramius/generated-hydrator](https://github.com/Ocramius/GeneratedHydrator)
 library with Symfony.
 
+
 # Installation
 
 First install the dependency:
@@ -25,37 +26,33 @@ return [
 ];
 ```
 
-# Autoload
-
-Without this step, this whole bundle is useless. For now, all code that
-hydrates or extracts code is stored into Symfony cache folder, add to
-your `composer.json`:
-
-```json
-    "autoload": {
-        "classmap": [
-            "var/cache/dev/generated-hydrator",
-            "var/cache/prod/generated-hydrator",
-            "var/cache/test/generated-hydrator"
-        ],
-        // ...
-    },
-```
-
-Then run:
-
-```sh
-composer dump-autoload
-```
-
-This is inconvenient because you will need to run it in production, after
-hydrators have been generated.
-
-A better solution will come later.
 
 # Configuration
 
-None. Later you will be able to highly customize the hydration process.
+Per default, this bundle will configure the hydrator generator to write
+hydrator classes under your `src/` directory, for example, the  `App\\Entity\User`
+class will have the following hydrator: `App\\Hydrator\\Entity\UserHydrator`,
+written in the `src/Hydrator/Entity/UserHydrator.php` file.
+
+In order to change the naming strategy, copy-paste the
+`src/Resources/config/packages/generated-hydrator.yaml` from this package in your
+project's `config/packages/` directory, and edit the following lines:
+
+```yaml
+generated-hydrator:
+    # ...
+    psr4_namespace_prefix: App
+    psr4_namespace_infix: Hydrator
+```
+
+ - `psr4_namespace_prefix` is your application namespace, it could be anything
+   such as `YourVendor\YourApplication` as long as matches one of the PSR-4 entries
+   in your `composer.json` file's `autoload` section,
+
+ - `psr4_namespace_infix` is the sub-namespace in which the generated classe will
+   be, please note that if you set it to `null`, generated hydrator classes will
+   be written in the same folder as their corresponding entities.
+
 
 # Usage
 
@@ -102,6 +99,7 @@ function some_function(Hydrator $hydrator)
 }
 ```
 
+
 # Some notes
 
  - we added a recursive nested object hydrator, it uses PHP >= 7.4 type declaration
@@ -110,10 +108,11 @@ function some_function(Hydrator $hydrator)
  - if you cannot use PHP >= 7.4, consider adding `symfony/property-info` dependency
    for nested property type lookup (it is slow, but it works).
 
+
 # Todo list
 
- - [ ] implement PSR-4 class name and file name generator,
- - [ ] switch to PSR-4 per default,
+ - [x] implement PSR-4 class name and file name generator,
+ - [x] switch to PSR-4 per default,
  - [ ] register automatically fallback autoloader for generated hydrator classes,
  - [ ] implement property blacklist for classes,
  - [ ] implement class blacklist,

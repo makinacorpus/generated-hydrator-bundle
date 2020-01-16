@@ -21,6 +21,8 @@ declare(strict_types=1);
 namespace GeneratedHydrator\Bridge\Symfony;
 
 use GeneratedHydrator\Configuration;
+use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Configuration;
+use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Factory;
 use Zend\Hydrator\HydratorInterface;
 
 /**
@@ -49,14 +51,25 @@ final class DefaultHydrator implements Hydrator
     /** @var array<string, \ReflectionClass> */
     private $reflectionClasses = [];
 
+    /** @var ?Psr4Factory */
+    private $psr4factory;
+
     /**
      * Default constructor
      */
     public function __construct(string $generatedClassesTargetDir, array $userConfiguration = [], string $defaultMode = self::MODE_CACHE)
     {
-        $this->generatedClassesTargetDir = $generatedClassesTargetDir;
-        $this->userConfiguration = $userConfiguration; // @todo validate it?
         $this->defaultMode = $defaultMode;
+        $this->generatedClassesTargetDir = $generatedClassesTargetDir;
+        $this->userConfiguration = $userConfiguration; // @todo validate it (using option resolver)?
+    }
+
+    /**
+     * Set PSR-4 factory
+     */
+    public function setPsr4Factory(Psr4Factory $psr4factory): void
+    {
+        $this->psr4factory = $psr4factory;;
     }
 
     /**
@@ -65,6 +78,7 @@ final class DefaultHydrator implements Hydrator
     private function createConfiguration(string $className): Configuration
     {
         $userConfiguration = \array_replace([
+            'mode' => $this->defaultMode,
             'auto_generate_proxies' => true,
             'class_name' => null,
             'class_namespace' => null,
@@ -85,8 +99,30 @@ final class DefaultHydrator implements Hydrator
         //    - instantiatior for classes
         //    - nested objects hydration (normalization)
 
-        $configuration = new Configuration($className);
-        $configuration->setGeneratedClassesTargetDir($userConfiguration['target_dir']);
+        switch ($userConfiguration['mode']) {
+
+            case self::MODE_CACHE:
+                $configuration = new Configuration($className);
+                $configuration->setGeneratedClassesTargetDir($userConfiguration['target_dir']);
+                break;
+
+            case self::MODE_PSR4:
+                if (!$this->psr4factory) {
+                    throw new \LogicException("No PSR-4 factory was provided");
+                }
+                $configuration = new Psr4Configuration($className);
+                $configuration->setPsr4Factory($this->psr4factory);
+                break;
+
+            default:
+                throw new \InvalidArgumentException(\sprintf(
+                    "'%s' mode for class '%s' hydrator is not supported, allowed values are: '%s'",
+                    $userConfiguration['mode'], $className,
+                    \implode("', '", [self::MODE_PSR4, self::MODE_CACHE])
+                ));
+        }
+
+        // Let those values override the default one above.
         if ($value = ($userConfiguration['auto_generate_proxies'] ?? null)) {
             $configuration->setAutoGenerateProxies($value);
         }

@@ -21,10 +21,10 @@ declare(strict_types=1);
 namespace GeneratedHydrator\Bridge\Symfony\Utils\FileLocator;
 
 use CodeGenerationUtils\FileLocator\FileLocatorInterface;
-use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Configuration;
+use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Factory;
 
 /**
- * @see \GeneratedHydrator\Bridge\Symfony\Utils\Psr4Configuration
+ * @see \GeneratedHydrator\Bridge\Symfony\Utils\Psr4Factory
  */
 final class Psr4FileLocator implements FileLocatorInterface
 {
@@ -50,8 +50,17 @@ final class Psr4FileLocator implements FileLocatorInterface
      */
     public function getGeneratedClassFileName(string $className) : string
     {
-        $classNameSuffix = Psr4Configuration::getClassSuffixInNamespace($className, $this->psr4NamespacePrefix);
+        $classNameSuffix = Psr4Factory::getClassSuffixInNamespace($className, $this->psr4NamespacePrefix);
 
-        return $this->psr4DirectoryRoot . '/' . \str_replace('\\', '/', $classNameSuffix) . '.php';
+        $filename = $this->psr4DirectoryRoot . '/' . \str_replace('\\', '/', $classNameSuffix) . '.php';
+        $directory = \dirname($filename);
+
+        if (!\is_dir($directory)) {
+            if (!\mkdir($directory, 0755, true)) {
+                throw new \RuntimeException(\sprintf("'%s' could not create directory"));
+            }
+        }
+
+        return $filename;
     }
 }

@@ -20,14 +20,14 @@ declare(strict_types=1);
 
 namespace GeneratedHydrator\Bridge\Symfony\Tests\Unit;
 
-use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Configuration;
+use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Factory;
 use PHPUnit\Framework\TestCase;
 
 final class Psr4AppNamingStrategyTest extends TestCase
 {
     public function testNormalUseCase(): void
     {
-        $configuration = new Psr4Configuration('/var/www/my-app/src', 'MyVendor\\MyApp');
+        $configuration = new Psr4Factory('/var/www/my-app/src', 'MyVendor\\MyApp');
         $classNameInflector = $configuration->getClassNameInflector();
         $fileLocator = $configuration->getFileLocator();
 
@@ -42,7 +42,7 @@ final class Psr4AppNamingStrategyTest extends TestCase
 
     public function testWithDiffentSuffixAndInfix(): void
     {
-        $configuration = new Psr4Configuration('/var/www/my-app/src', 'MyVendor\\MyApp', 'Bar');
+        $configuration = new Psr4Factory('/var/www/my-app/src', 'MyVendor\\MyApp', 'Bar');
         $classNameInflector = $configuration->getClassNameInflector();
         $fileLocator = $configuration->getFileLocator();
 
@@ -57,7 +57,7 @@ final class Psr4AppNamingStrategyTest extends TestCase
 
     public function testWithNoInfix(): void
     {
-        $configuration = new Psr4Configuration('/var/www/my-app/src', 'MyVendor\\MyApp', null);
+        $configuration = new Psr4Factory('/var/www/my-app/src', 'MyVendor\\MyApp', null);
         $classNameInflector = $configuration->getClassNameInflector();
         $fileLocator = $configuration->getFileLocator();
 

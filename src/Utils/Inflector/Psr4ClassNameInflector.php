@@ -21,10 +21,10 @@ declare(strict_types=1);
 namespace GeneratedHydrator\Bridge\Symfony\Utils\Inflector;
 
 use CodeGenerationUtils\Inflector\ClassNameInflectorInterface;
-use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Configuration;
+use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Factory;
 
 /**
- * @see \GeneratedHydrator\Bridge\Symfony\Utils\Psr4Configuration
+ * @see \GeneratedHydrator\Bridge\Symfony\Utils\Psr4Factory
  */
 final class Psr4ClassNameInflector implements ClassNameInflectorInterface
 {
@@ -48,7 +48,7 @@ final class Psr4ClassNameInflector implements ClassNameInflectorInterface
      */
     public function getGeneratedClassName(string $className, array $options = []): string
     {
-        $classNameSuffix = Psr4Configuration::getClassSuffixInNamespace($className, $this->psr4NamespacePrefix);
+        $classNameSuffix = Psr4Factory::getClassSuffixInNamespace($className, $this->psr4NamespacePrefix);
 
         if ($this->namespaceInfix) {
             return $this->psr4NamespacePrefix . '\\' . $this->namespaceInfix . '\\' . $classNameSuffix . 'Hydrator';
@@ -61,7 +61,7 @@ final class Psr4ClassNameInflector implements ClassNameInflectorInterface
      */
     public function getUserClassName(string $className): string
     {
-        throw new \RuntimeException("%s::%s is not implemented.", __CLASS__, __METHOD__);
+        return $className;
     }
 
     /**
@@ -69,6 +69,12 @@ final class Psr4ClassNameInflector implements ClassNameInflectorInterface
      */
     public function isGeneratedClassName(string $className): bool
     {
-        throw new \RuntimeException("%s::%s is not implemented.", __CLASS__, __METHOD__);
+        if ($this->namespaceInfix) {
+            $classPrefix = $this->psr4NamespacePrefix . '\\' . $this->namespaceInfix;
+
+            return \substr($className, 0, \strlen($classPrefix)) === $classPrefix;
+        }
+
+        return false;
     }
 }

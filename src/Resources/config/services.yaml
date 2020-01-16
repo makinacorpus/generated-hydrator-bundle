@@ -24,7 +24,7 @@ services:
     generated_hydrator.default:
         public: false
         class: GeneratedHydrator\Bridge\Symfony\DefaultHydrator
-        arguments: ["%kernel.cache_dir%/generated-hydrator", [], 'cache']
+        arguments: ["%kernel.cache_dir%/generated-hydrator"]
 
     # Deep hydrator implementation
     generated_hydrator.deep:

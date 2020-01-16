@@ -20,101 +20,48 @@ declare(strict_types=1);
 
 namespace GeneratedHydrator\Bridge\Symfony\Utils;
 
-use CodeGenerationUtils\FileLocator\FileLocatorInterface;
+use CodeGenerationUtils\GeneratorStrategy\GeneratorStrategyInterface;
 use CodeGenerationUtils\Inflector\ClassNameInflectorInterface;
-use GeneratedHydrator\Bridge\Symfony\Utils\FileLocator\Psr4FileLocator;
-use GeneratedHydrator\Bridge\Symfony\Utils\Inflector\Psr4ClassNameInflector;
+use GeneratedHydrator\Configuration;
 
 /**
- * Configures components for PSR-4 class naming and file locator.
+ * We need to override the configuration class to ensure that
+ * getGeneratorStrategy() will always be called lazyly.
  *
- * PSR-4 class name inflector, this needs your generated target class
- * directory to be within your application source; consider your application
- * source folder to be:
- *
- *   "%kernel.project_dir%/src"
- *
- * Where the namespace is:
- *
- *   "MyVendor\\MyApp\\"
- *
- * And the namespace where to write your hydrators:
- *
- *   "MyVendor\\MyApp\\Hydrator\\"
- *
- * Then you must set as target directory:
- *
- *   "%kernel.project_dir%/src/Hydrator"
- *
- * Then consider the following entity class:
- *
- *   "MyVendor\\MyApp\\Model\\SomeEntity"
- *
- * The hydrator class will be:
- *
- *   "MyVendor\\MyApp\\Model\\SomeEntity"
+ * If we dont, we must run setGeneratorStrategy() before knowing if the
+ * hydrator already exists or not, which will create an AST as some point
+ * and doing a few manipulations over it: we do NOT want this.
  */
-final class Psr4Configuration
+class Psr4Configuration extends Configuration
 {
-    const NAMESPACE_INFIX_DEFAULT = 'Hydrator';
+    private $psr4Factory;
 
-    /** @var string */
-    private $psr4DirectoryRoot;
-
-    /** @var string */
-    private $psr4NamespacePrefix;
-
-    /** @var ?string */
-    private $namespaceInfix;
-
-    /** @var ?FileLocatorInterface */
-    private $fileLocator;
-
-    /** @var ?ClassNameInflectorInterface */
-    private $nameInflector;
-
-    /**
-     * Default constructor
-     */
-    public function __construct(string $psr4DirectoryRoot, string $psr4NamespacePrefix, ?string $namespaceInfix = self::NAMESPACE_INFIX_DEFAULT)
+    public function setPsr4Factory(Psr4Factory $psr4Factory): void
     {
-        $this->psr4DirectoryRoot = $psr4DirectoryRoot;
-        $this->psr4NamespacePrefix = $psr4NamespacePrefix;
-        $this->namespaceInfix = $namespaceInfix;
+        $this->psr4Factory = $psr4Factory;
     }
 
     /**
-     * From the given namespace prefix, find class name suffix (after the prefix).
+     * {@inheritdoc}
      */
-    public static function getClassSuffixInNamespace(string $className, string $namespacePrefix): string
+    public function getGeneratorStrategy() : GeneratorStrategyInterface
     {
-        $className = \trim($className, '\\');
-
-        $namespaceLength = \strlen($namespacePrefix);
-        if (\substr($className, 0, $namespaceLength) !== $namespacePrefix) {
-            throw new \InvalidArgumentException(\sprintf("Class '%s' is not in namespace '%s'", $className, $namespacePrefix));
+        if ($this->generatorStrategy === null) {
+            $this->generatorStrategy = $this->psr4Factory->getGeneratorStrategy();
         }
 
-        return \substr($className, $namespaceLength + 1);
+        return $this->generatorStrategy;
     }
 
     /**
-     * Get class name inflector
+     * {@inheritdoc}
      */
-    public function getClassNameInflector(): ClassNameInflectorInterface
+    public function getClassNameInflector() : ClassNameInflectorInterface
     {
-        return $this->nameInflector ?? (
-            $this->nameInflector = new Psr4ClassNameInflector($this->psr4NamespacePrefix, $this->namespaceInfix)
-        );
-    }
+        if ($this->classNameInflector === null) {
+            $this->classNameInflector = $this->psr4Factory->getClassNameInflector();
+        }
 
-    /**
-     * Get file locator
-     */
-    public function getFileLocator(): FileLocatorInterface
-    {
-        return $this->fileLocator ?? (
-            $this->fileLocator = new Psr4FileLocator($this->psr4DirectoryRoot, $this->psr4NamespacePrefix)
-        );
+        return $this->classNameInflector;
     }
 }
