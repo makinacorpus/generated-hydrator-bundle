@@ -69,10 +69,13 @@ final class DeepHydrator implements Hydrator
             return $values;
         }
 
+        // We do not validate property types, this is not our job, the business
+        // layer asking for hydration should already have done that properly
+        // and PHP since 7.4 will do proper type validation if properties are
+        // typed. This is includes nullable as well.
         foreach ($hydrationPlan->getProperties() as $property) {
             \assert($property instanceof HydratedProperty);
 
-            // @todo Should we add non nullable properties validation here?
             // @todo Should we really handle collections as well?
             $propertyName = $property->name;
 
@@ -134,23 +137,25 @@ final class DeepHydrator implements Hydrator
             return $values;
         }
 
+        // Let extraction be loose, and do not fail when properties don't
+        // match the rightful type: we trust full blown, PHP instances to
+        // be valid, especially when using PHP 7.4 that would never allow
+        // type mismatch.
+        // @todo handle nested collections
         foreach ($hydrationPlan->getProperties() as $property) {
             \assert($property instanceof HydratedProperty);
 
-            // @todo Should we add non nullable properties validation here?
-            // @todo Should we really handle collections as well?
             $propertyName = $property->name;
 
             if (null === ($value = $values[$propertyName] ?? null)) {
                 continue;
             }
-            if (!$value instanceof $property->className) {
-                // Property does not have the expected type, we cannot proceed
-                // further.
-                continue;
-            }
 
-            $values[$propertyName] = $this->extract($value);
+            // Skip properties that don't have the rightful type, this
+            // could be because the hydration plan is wrong.
+            if ($value instanceof $property->className) {
+                $values[$propertyName] = $this->extract($value);
+            }
         }
 
         return $values;

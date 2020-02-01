@@ -18,10 +18,7 @@ Then add into your `config/bundles.php` file:
 <?php
 
 return [
-    Symfony\Bundle\FrameworkBundle\FrameworkBundle::class => ['all' => true],
-
     // ...
-
     \GeneratedHydrator\Bridge\Symfony\GeneratedHydratorBundle::class => ['all' => true],
 ];
 ```
@@ -111,11 +108,19 @@ function some_function(Hydrator $hydrator)
 
 # Todo list
 
+In order of preference:
+
  - [x] implement PSR-4 class name and file name generator,
  - [x] switch to PSR-4 per default,
+ - [ ] autoload classes when they are just generated,
  - [ ] register automatically fallback autoloader for generated hydrator classes,
+   without this, classes generated within a cache directory will no be autoloadable,
+ - [ ] handle collections in nested extraction/hydration,
+ - [ ] implement class blacklist, some classes such as `\DateTime` and `\Ramsey\Uuid\`
+   should be dealt as terminal types, and normalized in the business layer,
  - [ ] implement property blacklist for classes,
- - [ ] implement class blacklist,
+ - [ ] allow usage of hydrator without the nested implementation explicitely by the
+   API user, maybe using a specific interface and a specific service identifier,
+ - [ ] add an option to disable property-info usage even when classes are loaded,
  - [ ] write advanced configuration for users,
- - [ ] write more tests.
-
+ - [ ] write more tests, lots of test.
