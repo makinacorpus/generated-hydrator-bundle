@@ -37,4 +37,16 @@ final class ClassWithNestedObject
     {
         return $this->property1;
     }
+
+    /**
+     * For extract() unit tests
+     */
+    public static function create(?SimpleClass $property0 = null, ?self $property1 = null): self
+    {
+        $ret = new self();
+        $ret->property0 = $property0;
+        $ret->property1 = $property1;
+
+        return $ret;
+    }
 }

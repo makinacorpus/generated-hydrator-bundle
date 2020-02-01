@@ -61,11 +61,10 @@ final class DeepHydrator implements Hydrator
     /**
      * Process nested object hydration
      */
-    private function processValues(string $className, array $values): array
+    private function hydrateValues(string $className, array $values): array
     {
         $hydrationPlan = $this->getHydrationPlan($className);
 
-        // @todo handle this in extract() too
         if ($hydrationPlan->isEmpty()) {
             return $values;
         }
@@ -108,7 +107,7 @@ final class DeepHydrator implements Hydrator
         $className = \get_class($object);
 
         $this->hydrator->hydrate(
-            $this->processValues($className, $values),
+            $this->hydrateValues($className, $values),
             $object
         );
     }
@@ -120,8 +119,41 @@ final class DeepHydrator implements Hydrator
     {
         return $this->hydrator->createAndHydrate(
             $className,
-            $this->processValues($className, $values)
+            $this->hydrateValues($className, $values)
         );
+    }
+
+    /**
+     * Process nested object hydration
+     */
+    private function extractValues(string $className, array $values): array
+    {
+        $hydrationPlan = $this->getHydrationPlan($className);
+
+        if ($hydrationPlan->isEmpty()) {
+            return $values;
+        }
+
+        foreach ($hydrationPlan->getProperties() as $property) {
+            \assert($property instanceof HydratedProperty);
+
+            // @todo Should we add non nullable properties validation here?
+            // @todo Should we really handle collections as well?
+            $propertyName = $property->name;
+
+            if (null === ($value = $values[$propertyName] ?? null)) {
+                continue;
+            }
+            if (!$value instanceof $property->className) {
+                // Property does not have the expected type, we cannot proceed
+                // further.
+                continue;
+            }
+
+            $values[$propertyName] = $this->extract($value);
+        }
+
+        return $values;
     }
 
     /**
@@ -129,6 +161,11 @@ final class DeepHydrator implements Hydrator
      */
     public function extract(object $object): array
     {
-        return $this->hydrator->extract($object);
+        $className = \get_class($object);
+
+        return $this->extractValues(
+            $className,
+            $this->hydrator->extract($object)
+        );
     }
 }

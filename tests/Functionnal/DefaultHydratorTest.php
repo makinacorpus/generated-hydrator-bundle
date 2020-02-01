@@ -153,6 +153,35 @@ final class DefaultHydratorTest extends TestCase
 
     public function testClassWithPlanExtraction(): void
     {
-        self::markTestIncomplete();
+        $hydrator = $this->createHydrator();
+
+        $object = ClassWithNestedObject::create(
+            new SimpleClass(7, 11),
+            ClassWithNestedObject::create(
+                new SimpleClass(13, 19),
+            )
+        );
+
+        $values = $hydrator->extract($object);
+        self::assertIsArray($values);
+
+        self::assertSame(
+            [
+                'property0' => [
+                    'property0' => 7,
+                    'property1' => 11,
+                    'property2' => null,
+                ],
+                'property1' => [
+                    'property0' => [
+                        'property0' => 13,
+                        'property1' => 19,
+                        'property2' => null,
+                    ],
+                    'property1' => null,
+                ],
+            ],
+            $values
+        );
     }
 }
