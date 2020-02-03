@@ -24,12 +24,16 @@ use GeneratedHydrator\Bridge\Symfony\HydrationPlan\HydratedProperty;
 use GeneratedHydrator\Bridge\Symfony\HydrationPlan\HydrationPlan;
 use GeneratedHydrator\Bridge\Symfony\HydrationPlan\HydrationPlanBuilder;
 use GeneratedHydrator\Bridge\Symfony\HydrationPlan\ReflectionHydrationPlanBuilder;
+use GeneratedHydrator\Bridge\Symfony\Utils\ClassBlacklist;
 
 /**
  * Use hydration plan to hydrated nested/deep objects graphs.
  */
 final class DeepHydrator implements Hydrator
 {
+    /** @var ClassBlacklist */
+    private $classBlacklist;
+
     /** @var Hydrator */
     private $hydrator;
 
@@ -42,10 +46,11 @@ final class DeepHydrator implements Hydrator
     /**
      * Default constructor
      */
-    public function __construct(Hydrator $hydrator, ?HydrationPlanBuilder $hydrationPlanBuilder = null)
+    public function __construct(Hydrator $hydrator, ?HydrationPlanBuilder $hydrationPlanBuilder = null, ?ClassBlacklist $classBlacklist = null)
     {
         $this->hydrator = $hydrator;
         $this->hydrationPlanBuilder = $hydrationPlanBuilder ?? new ReflectionHydrationPlanBuilder();
+        $this->classBlacklist = $classBlacklist ?? new ClassBlacklist();
     }
 
     /**
@@ -82,6 +87,11 @@ final class DeepHydrator implements Hydrator
             if (null === ($value = $values[$propertyName] ?? null)) {
                 continue;
             }
+
+            if ($this->classBlacklist->isBlacklisted($property->className)) {
+                continue;
+            }
+
             if ($value instanceof $property->className) {
                 // Property is already an object with the right class, let it
                 // pass gracefully the caller already has hydrated the object.
@@ -148,6 +158,10 @@ final class DeepHydrator implements Hydrator
             $propertyName = $property->name;
 
             if (null === ($value = $values[$propertyName] ?? null)) {
+                continue;
+            }
+
+            if ($this->classBlacklist->isBlacklisted($property->className)) {
                 continue;
             }
 

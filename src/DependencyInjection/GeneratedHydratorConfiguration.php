@@ -31,7 +31,7 @@ final class GeneratedHydratorConfiguration implements ConfigurationInterface
      */
     public function getConfigTreeBuilder()
     {
-        $treeBuilder = new TreeBuilder('generated-hydrator');
+        $treeBuilder = new TreeBuilder('generated_hydrator');
         $rootNode = $treeBuilder->getRootNode();
 
         $rootNode
@@ -48,6 +48,9 @@ final class GeneratedHydratorConfiguration implements ConfigurationInterface
                 ->end()
                 ->scalarNode('psr4_source_directory')
                     ->defaultValue("%kernel.project_dir%/src")
+                ->end()
+                ->arrayNode('class_blacklist')
+                    ->scalarPrototype()->end()
                 ->end()
                 /*
                 ->arrayNode('runner')

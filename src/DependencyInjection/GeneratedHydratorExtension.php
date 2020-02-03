@@ -41,13 +41,19 @@ final class GeneratedHydratorExtension extends Extension
         $loader = new YamlFileLoader($container, new FileLocator(\dirname(__DIR__).'/Resources/config'));
         $loader->load('services.yaml');
 
+        $this->registerClassBlacklist($container, $config);
         $this->createDefaultPsr4Factory($container, $config);
         $this->configureDefaultHydrator($container, $config);
     }
 
-    /**
-     * Create PSR-4 factory object.
-     */
+    private function registerClassBlacklist(ContainerBuilder $container, array $config): void
+    {
+        $container
+            ->getDefinition('generated_hydrator.class_black_list')
+            ->setArgument(0, $config['class_blacklist'] ?? [])
+        ;
+    }
+
     private function createDefaultPsr4Factory(ContainerBuilder $container, array $config): void
     {
         $serviceId = 'generated_hydrator.psr4_configuration';
@@ -65,9 +71,6 @@ final class GeneratedHydratorExtension extends Extension
         $container->getDefinition('generated_hydrator.default')->addMethodCall('setPsr4Factory', [new Reference($serviceId)]);
     }
 
-    /**
-     * Configures the default hydrator
-     */
     private function configureDefaultHydrator(ContainerBuilder $container, array $config): void
     {
         $container

@@ -36,7 +36,7 @@ In order to change the naming strategy, copy-paste the
 project's `config/packages/` directory, and edit the following lines:
 
 ```yaml
-generated-hydrator:
+generated_hydrator:
     # ...
     psr4_namespace_prefix: App
     psr4_namespace_infix: Hydrator
@@ -118,7 +118,7 @@ In order of preference:
  - [ ] handle collections in nested extraction/hydration,
  - [ ] implement class blacklist, some classes such as `\DateTime` and `\Ramsey\Uuid\`
    should be dealt as terminal types, and normalized in the business layer,
- - [ ] implement property blacklist for classes,
+ - [x] implement property blacklist for classes,
  - [ ] allow usage of hydrator without the nested implementation explicitely by the
    API user, maybe using a specific interface and a specific service identifier,
  - [ ] add an option to disable property-info usage even when classes are loaded,

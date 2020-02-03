@@ -1,4 +1,4 @@
-generated-hydrator:
+generated_hydrator:
 
     # This configuration will generate hydrators in your app namespace
     # for example the class "App\Domain\Model\Foo" in the file
@@ -9,3 +9,13 @@ generated-hydrator:
     psr4_namespace_prefix: App
     psr4_namespace_infix: Hydrator
     psr4_source_directory: "%kernel.project_dir%/src"
+
+    # For nested objects/deep graph hydrator, set property classes to
+    # ignore for which generated hydration should not be attempted.
+    class_blacklist:
+        - App\SomeClass
+        - DateTime
+        - DateTimeImmutable
+        - DateTimeInterface
+        - Ramsey\Uuid\Uuid
+        - Ramsey\Uuid\UuidInterface

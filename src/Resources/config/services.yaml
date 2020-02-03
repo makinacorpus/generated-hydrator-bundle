@@ -20,6 +20,10 @@ services:
         public: false
         alias: generated_hydrator.hydration_plan_builder.cache
 
+    generated_hydrator.class_black_list:
+        public: false
+        class: GeneratedHydrator\Bridge\Symfony\Utils\ClassBlacklist
+
     # Default hydrator implementation
     generated_hydrator.default:
         public: false
@@ -30,7 +34,7 @@ services:
     generated_hydrator.deep:
         public: false
         class: GeneratedHydrator\Bridge\Symfony\DeepHydrator
-        arguments: ["@generated_hydrator.default", '@generated_hydrator.hydration_plan_builder']
+        arguments: ["@generated_hydrator.default", '@generated_hydrator.hydration_plan_builder', '@generated_hydrator.class_black_list']
 
     # Main public facade, please use this service for injection.
     generated_hydrator:
