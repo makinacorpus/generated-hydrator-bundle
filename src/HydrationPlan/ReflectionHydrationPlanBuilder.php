@@ -180,12 +180,12 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
      *
      * @return array[string,bool,bool]
      */
-    public static function extractTypesFromDocBlock(string $docBlock): ?array
+    public static function extractTypesFromDocBlock(string $docBlock): array
     {
         // This is where it becomes really ulgy.
         $matches = [];
         if (!\preg_match('/@var\s+([^\s\n@]+)/ums', $docBlock, $matches)) {
-            return null;
+            return [];
         }
 
         $typeStrings = \array_unique(
@@ -262,13 +262,13 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
      *
      * @return list<HydratedProperty>
      */
-    private function findPropertyWithPropertyInfo(string $className, string $propertyName, \ReflectionProperty $property): ?array
+    private function findPropertyWithPropertyInfo(string $className, string $propertyName, \ReflectionProperty $property): array
     {
         if (!$typeInfoExtractor = $this->getTypeInfoExtractor()) {
-            return null;
+            return [];
         }
         if (!$types = $typeInfoExtractor->getTypes($className, $property->getName())) {
-            return null;
+            return [];
         }
 
         $ret = [];
