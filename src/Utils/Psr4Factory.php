@@ -54,7 +54,7 @@ use GeneratedHydrator\Bridge\Symfony\Utils\Inflector\Psr4ClassNameInflector;
  *
  * The hydrator class will be:
  *
- *   "MyVendor\\MyApp\\Model\\SomeEntity"
+ *   "MyVendor\\MyApp\\Hydrator\\Model\\SomeEntity"
  */
 final class Psr4Factory
 {
@@ -97,7 +97,9 @@ final class Psr4Factory
 
         $namespaceLength = \strlen($namespacePrefix);
         if (\substr($className, 0, $namespaceLength) !== $namespacePrefix) {
-            throw new \InvalidArgumentException(\sprintf("Class '%s' is not in namespace '%s'", $className, $namespacePrefix));
+            // For classes that don't belong to our namespace, use the FQDN
+            // as class suffix.
+            return $className;
         }
 
         return \substr($className, $namespaceLength + 1);
