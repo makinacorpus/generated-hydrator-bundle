@@ -37,7 +37,7 @@ final class GeneratedHydratorConfiguration implements ConfigurationInterface
         $rootNode
             ->children()
                 ->enumNode('mode')
-                    ->values(['psr-4', 'cache'])
+                    ->values(['psr4', 'cache'])
                     ->defaultValue('psr4')
                 ->end()
                 ->scalarNode('psr4_namespace_prefix')
