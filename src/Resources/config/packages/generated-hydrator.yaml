@@ -19,3 +19,9 @@ generated_hydrator:
         - DateTimeInterface
         - Ramsey\Uuid\Uuid
         - Ramsey\Uuid\UuidInterface
+
+    # Set here an array of fully qualifiied PHP class names which
+    # you wish the generate command to be able to pre-generate.
+    # If you leave this empty, hydrator generation will always be
+    # lazy and at runtime.
+    class_list: []

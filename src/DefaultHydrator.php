@@ -20,6 +20,7 @@ declare(strict_types=1);
 
 namespace GeneratedHydrator\Bridge\Symfony;
 
+use CodeGenerationUtils\GeneratorStrategy\FileWriterGeneratorStrategy;
 use GeneratedHydrator\Configuration;
 use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Configuration;
 use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Factory;
@@ -51,7 +52,7 @@ final class DefaultHydrator implements Hydrator
     /** @var array<string, \ReflectionClass> */
     private $reflectionClasses = [];
 
-    /** @var ?Psr4Factory */
+    /** @var null|Psr4Factory */
     private $psr4factory;
 
     /**
@@ -69,7 +70,7 @@ final class DefaultHydrator implements Hydrator
      */
     public function setPsr4Factory(Psr4Factory $psr4factory): void
     {
-        $this->psr4factory = $psr4factory;;
+        $this->psr4factory = $psr4factory;
     }
 
     /**
@@ -148,6 +149,42 @@ final class DefaultHydrator implements Hydrator
         ;
 
         return new $hydratorClassName();
+    }
+
+    /**
+     * Regenerate hydrator
+     */
+    public function regenerateHydrator(string $className): array
+    {
+        $configuration = $this->createConfiguration($className);
+        $targetClassName = $configuration->getClassNameInflector()->getGeneratedClassName($className);
+
+        if ($configuration instanceof Psr4Configuration) {
+            $targetFileName = $this->psr4factory->getFileLocator()->getGeneratedClassFileName($targetClassName);
+        } else {
+            $targetFileName = '(in cache)';
+        }
+
+        /*
+         * @todo find a way to do this properly, we can't do it after we
+         *   generated the classname, because class name generation will
+         *   create the class and the autoload will register it, then,
+         *   we're doomed, becaue the getHydratorClass() won't life a
+         *   finger since the class exists in the PHP side.
+         *
+        if (\file_exists($targetFileName)) {
+            if (!@\unlink($targetFileName)) {
+                throw new \RuntimeException(\sprintf("Could not delete file: %s", $targetFileName));
+            }
+        }
+         */
+
+        $configuration->createFactory()->getHydratorClass();
+
+        return [
+            'class' => $targetClassName,
+            'filename' => $targetFileName,
+        ];
     }
 
     /**

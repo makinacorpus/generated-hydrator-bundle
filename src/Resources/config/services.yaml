@@ -1,3 +1,6 @@
+parameters:
+    generated_hydrator.class_list: []
+
 services:
 
     # Only existing implementation for now
@@ -43,3 +46,10 @@ services:
     # Alias for argument resolvers
     GeneratedHydrator\Bridge\Symfony\Hydrator:
         alias: generated_hydrator
+
+    # Generate command
+    generated_hydrator.command.generate:
+        public: false
+        class: GeneratedHydrator\Bridge\Symfony\Command\GenerateCommand
+        arguments: ['@generated_hydrator.default', "%generated_hydrator.class_list%"]
+        tags: ['console.command']

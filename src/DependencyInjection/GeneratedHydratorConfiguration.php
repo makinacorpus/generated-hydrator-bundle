@@ -52,6 +52,9 @@ final class GeneratedHydratorConfiguration implements ConfigurationInterface
                 ->arrayNode('class_blacklist')
                     ->scalarPrototype()->end()
                 ->end()
+                ->arrayNode('class_list')
+                    ->scalarPrototype()->defaultNull()->end()
+                ->end()
                 /*
                 ->arrayNode('runner')
                     ->normalizeKeys(true)

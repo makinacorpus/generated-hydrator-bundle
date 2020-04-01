@@ -41,6 +41,8 @@ final class GeneratedHydratorExtension extends Extension
         $loader = new YamlFileLoader($container, new FileLocator(\dirname(__DIR__).'/Resources/config'));
         $loader->load('services.yaml');
 
+        $container->setParameter('generated_hydrator.class_list', $config['class_list'] ?? []);
+
         $this->registerClassBlacklist($container, $config);
         $this->createDefaultPsr4Factory($container, $config);
         $this->configureDefaultHydrator($container, $config);
