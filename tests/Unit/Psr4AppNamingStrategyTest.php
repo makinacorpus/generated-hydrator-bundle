@@ -40,6 +40,21 @@ final class Psr4AppNamingStrategyTest extends TestCase
         self::assertSame('/var/www/my-app/src/Hydrator/Domain/Model/SomeEntityHydrator.php', $filename);
     }
 
+    public function testNormalUseCaseWithExternalClass(): void
+    {
+        $configuration = new Psr4Factory('/var/www/my-app/src', 'MyVendor\\MyApp');
+        $classNameInflector = $configuration->getClassNameInflector();
+        $fileLocator = $configuration->getFileLocator();
+
+        $entityClass = 'AnotherVendor\\Foo\\Bar\\SomeEntity';
+
+        $hydratorClassName = $classNameInflector->getGeneratedClassName($entityClass);
+        self::assertSame('MyVendor\\MyApp\\Hydrator\\AnotherVendor\\Foo\\Bar\\SomeEntityHydrator', $hydratorClassName);
+
+        $filename = $fileLocator->getGeneratedClassFileName($hydratorClassName);
+        self::assertSame('/var/www/my-app/src/Hydrator/AnotherVendor/Foo/Bar/SomeEntityHydrator.php', $filename);
+    }
+
     public function testWithDiffentSuffixAndInfix(): void
     {
         $configuration = new Psr4Factory('/var/www/my-app/src', 'MyVendor\\MyApp', 'Bar');
