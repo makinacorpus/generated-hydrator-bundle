@@ -98,15 +98,17 @@ final class DeepHydrator implements Hydrator
                 continue;
             }
 
-            if (!\is_array($value)) {
-                throw new \InvalidArgumentException(\sprintf(
-                    "'%s::%s' must be an instanceof of %s, %s given",
-                    $className, $propertyName, $property->className,
-                    (\is_object($value) ? \get_class($value) : \gettype($value))
-                ));
+            if (\is_array($value)) {
+                $values[$propertyName] = $this->createAndHydrate($property->className, $value);
             }
 
-            $values[$propertyName] = $this->createAndHydrate($property->className, $value);
+            /*
+            throw new \InvalidArgumentException(\sprintf(
+                "'%s::%s' must be an instanceof of %s, %s given",
+                $className, $propertyName, $property->className,
+                (\is_object($value) ? \get_class($value) : \gettype($value))
+            ));
+             */
         }
 
         return $values;
