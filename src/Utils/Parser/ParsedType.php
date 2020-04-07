@@ -28,4 +28,9 @@ final class ParsedType
     public bool $isNullable = false;
     public ?self $keyType = null;
     public ?self $valueType = null;
+
+    public function isUnion(): bool
+    {
+        return 1 < \count($this->internalTypes);
+    }
 }

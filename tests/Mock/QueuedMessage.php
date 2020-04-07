@@ -18,29 +18,44 @@
 
 declare(strict_types=1);
 
-namespace GeneratedHydrator\Bridge\Symfony\HydrationPlan;
+namespace GeneratedHydrator\Bridge\Symfony\Tests\Mock;
+
+use Ramsey\Uuid\UuidInterface;
 
 /**
- * @internal
+ * This is a real class from a real project. We want to be sure everything
+ * in this will be correctly parsed, and will not wake up the docblock parser
+ * or the property-info component.
  */
-final class HydratedProperty
+final class QueuedMessage
 {
-    public string $name;
-    /** Class name to use for hydrating/denormalizing this property. */
-    public string $className;
-    public bool $builtIn = false;
-    public bool $union = false;
-    public bool $allowsNull = true;
-    public bool $collection = false;
+    /** @var UuidInterface */
+    private $id;
 
-    public function empty(): HydratedProperty
-    {
-        $property = new HydratedProperty();
-        $property->allowsNull = true;
-        $property->builtIn = true;
-        $property->className = 'mixed';
-        $property->union = false;
+    /** @var \DateTimeInterface */
+    private $created_at;
 
-        return $property;
-    }
+    /** @var ?\DateTimeInterface */
+    private $consumed_at;
+
+    /** @var bool */
+    private $has_failed = false;
+
+    /** @var string */
+    private $body = '';
+
+    /** @var string */
+    private $queue = 'default';
+
+    /** @var ?string */
+    private $type;
+
+    /** @var ?string */
+    private $content_type;
+
+    /** @var array<string, string> */
+    private $headers = [];
+
+    /** @var int */
+    private $serial;
 }

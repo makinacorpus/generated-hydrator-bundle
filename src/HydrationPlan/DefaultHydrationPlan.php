@@ -25,11 +25,9 @@ namespace GeneratedHydrator\Bridge\Symfony\HydrationPlan;
  */
 final class DefaultHydrationPlan implements HydrationPlan
 {
-    /** @var string */
-    private $className;
-
-    /** @var list<HydratedProperty> */
-    private $properties = [];
+    private string $className;
+    /** @var HydratedProperty[] */
+    private array $properties = [];
 
     public function __construct(string $className, iterable $properties)
     {

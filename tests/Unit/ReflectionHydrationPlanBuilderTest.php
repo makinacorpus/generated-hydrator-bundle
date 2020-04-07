@@ -42,6 +42,9 @@ final class ReflectionHydrationPlanBuilderTest extends TestCase
         yield ["/** @var \DateTime[] */", 'DateTime', false, true];
         yield ["/** @var ?\DateTimeInterface[] */", 'DateTimeInterface', true, true];
 
+        // Real use case of failing production code use cases.
+        yield ["/** @var array<string, string> */", 'string', false, true];
+
         // Some advanced list types.
         // @todo We parse them correctly, but there is no point in attempting
         //   to guess "list of list of Foo" types, we won't do anything with it.
@@ -64,31 +67,11 @@ final class ReflectionHydrationPlanBuilderTest extends TestCase
      */
     public function testExtractTypesFromDocBlock($docBlock, string $expected, bool $optional, bool $collection): void
     {
-        $types = ReflectionHydrationPlanBuilder::extractTypesFromDocBlock($docBlock);
+        $type = ReflectionHydrationPlanBuilder::extractTypesFromDocBlock($docBlock);
 
-        self::assertCount(1, $types);
-        self::assertSame($expected, $types[0][0]);
-        self::assertSame($collection, $types[0][1]);
-        self::assertSame($optional, $types[0][2]);
-    }
-
-    /**
-     * Data provider
-     */
-    public static function dataExtractTypesFromDocBlockWithScalars()
-    {
-        // Real use case of failing production code use cases.
-        yield ["/** @var array<string, string> */"];
-    }
-
-    /**
-     * @dataProvider dataExtractTypesFromDocBlockWithScalars
-     */
-    public function testExtractTypesFromDocBlockWithScalars($docBlock): void
-    {
-        $types = ReflectionHydrationPlanBuilder::extractTypesFromDocBlock($docBlock);
-
-        self::assertCount(0, $types);
+        self::assertSame($expected, $type->className);
+        self::assertSame($collection, $type->collection);
+        self::assertSame($optional, $type->allowsNull);
     }
 
     public function testResolveTypeFromClassPropertyWithFqdn(): void

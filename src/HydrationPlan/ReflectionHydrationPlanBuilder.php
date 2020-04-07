@@ -31,14 +31,10 @@ use Symfony\Component\PropertyInfo\Extractor\PhpDocExtractor;
  */
 final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
 {
-    /** @var bool */
-    private $propertiesAreTyped = false;
-
-    /** @var ?PropertyTypeExtractorInterface */
-    private $typeInfoExtractor;
-
-    /** @var bool */
-    private $typeInfoExtractorLoaded = false;
+    private bool $propertiesAreTyped = false;
+    private ?PropertyTypeExtractorInterface $typeInfoExtractor = null;
+    private bool $typeInfoExtractorLoaded = false;
+    private bool $typeInfoExtractorEnabled = true;
 
     /**
      * Default constructor.
@@ -74,16 +70,34 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
     }
 
     /**
+     * Scalar types.
+     */
+    public static function isTypePrimitive(string $type): bool
+    {
+        return 'bool' === $type || 'float' === $type || 'int' === $type || 'string' === $type;
+    }
+
+    /**
+     * Collection types.
+     */
+    public static function isCollectionType(string $type): bool
+    {
+        return
+            'array' === $type || 'iterable' === $type ||
+            // From potential psalm or IDE known typings.
+            'list' === $type ||
+            // @todo Do this better. Use class_implements() or such to find
+            //   \Traversable types in parenting tree.
+            'Traversable' === $type || 'Generator' === $type || 'Iterator' === $type
+        ;
+    }
+
+    /**
      * Excluded types
      */
     public static function isTypeBlacklisted(string $type): bool
     {
-        return \in_array($type, [
-            // PHP native types.
-            'bool', 'float', 'int', 'null', 'string', 'array',
-            // Commonly used list types.
-            'iterable', 'list', 'Traversable', 'Generator',
-        ]);
+        return self::isTypePrimitive($type) || self::isCollectionType($type) || 'null' === $type || 'callable' === $type;
     }
 
     /**
@@ -93,6 +107,15 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
     public function disablePropertyTypeReflection(): void
     {
         $this->propertiesAreTyped = false;
+    }
+
+    /**
+     * @internal For unit testing purpose only.
+     * @codeCoverageIgnore
+     */
+    public function disableTypeInfoExtractor()
+    {
+        $this->typeInfoExtractorEnabled = false;
     }
 
     /**
@@ -109,6 +132,10 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
      */
     private function getTypeInfoExtractor(): ?PropertyTypeExtractorInterface
     {
+        if (!$this->typeInfoExtractorEnabled) {
+            return null;
+        }
+
         if (!$this->typeInfoExtractorLoaded && !$this->typeInfoExtractor) {
             $this->typeInfoExtractorLoaded = true;
             $this->typeInfoExtractor = self::createDefaultTypeInfoExtractor();
@@ -129,37 +156,139 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
         if (!$refType = $property->getType()) {
             return null;
         }
-        if ($refType->isBuiltIn()) { // If it's not built-in, it's a class or interface.
+
+        $typeName = $refType->getName();
+
+        // Drop collection types, in order to let PHP docblock parser to find
+        // target collection value type.
+        if (self::isCollectionType($typeName)) {
             return null;
         }
 
-        return new HydratedProperty($propertyName, $refType->getName(), false, $refType->allowsNull());
+        $property = new HydratedProperty();
+        $property->allowsNull = $refType->allowsNull();
+        $property->builtIn = $refType->isBuiltIn();
+        $property->className = $typeName;
+        $property->collection = false;
+        $property->name = $propertyName;
+        $property->union = false; // @todo PHP8 will have this.
+
+        return $property;
+    }
+
+    /**
+     * Return an array of type definition arrays from an arbitrary doc block.
+     *
+     * @internal Set to public for unit tests only.
+     */
+    public static function extractTypesFromDocBlock(string $docBlock): ?HydratedProperty
+    {
+        // This is where it becomes really ulgy.
+        $matches = [];
+        if (!\preg_match('/@var\s+([^\*\n@]+)/ums', $docBlock, $matches)) {
+            return [];
+        }
+
+        try {
+            if (!$type = TypeParser::parse($matches[1])) {
+                // If we were unable to find any type information, property-info
+                // will not succeeed either, so drop from here.
+                return HydratedProperty::empty();
+            }
+        } catch (\InvalidArgumentException $e) {
+            // Be silent when a PHP docbock contains typos.
+            return null;
+        }
+
+        $firstTypeFound = null;
+        $propertyIsCollection = false;
+
+        // We do not handle type recursivity, only base type matters here,
+        // so we will attempt to find the most generic type of the list.
+        // @todo current code will only take the first one.
+        if ($type->isCollection && $type->valueType) {
+            $propertyIsCollection = true;
+
+            foreach ($type->valueType->internalTypes as $phpType) {
+                // Internal type reprensentation with uses a QDN which must be
+                // absolute, and unprefixed with '\\'. Else custom class resolver
+                // will fail when using CLASS::class constant.
+                $phpType = \trim($phpType, '\\');
+
+                if (self::isTypeBlacklisted($phpType)) {
+                    if (!$firstTypeFound && self::isTypePrimitive($phpType)) {
+                        $firstTypeFound = $phpType;
+                    }
+                    continue;
+                }
+
+                // Stop on first.
+                // @todo Handle union types correctly.
+                $property = new HydratedProperty();
+                $property->allowsNull = $type->isNullable;
+                $property->builtIn = false;
+                $property->className = $phpType;
+                $property->collection = true;
+                $property->union = $type->isUnion();
+
+                return $property;
+            }
+        } else {
+            foreach ($type->internalTypes as $phpType) {
+                // Internal type reprensentation with uses a QDN which must be
+                // absolute, and unprefixed with '\\'. Else custom class resolver
+                // will fail when using CLASS::class constant.
+                $phpType = \trim($phpType, '\\');
+
+                if (self::isTypeBlacklisted($phpType)) {
+                    if (!$firstTypeFound && self::isTypePrimitive($phpType)) {
+                        $firstTypeFound = $phpType;
+                    }
+                    continue;
+                }
+
+                $property = new HydratedProperty();
+                $property->allowsNull = $type->isNullable;
+                $property->builtIn = false;
+                $property->className = $phpType;
+                $property->collection = false;
+                $property->union = $type->isUnion();
+
+                return $property;
+            }
+        }
+
+        if (!$firstTypeFound) {
+            return null;
+        }
+
+        // If we found at least a scalar type, return that early and do not
+        // let the very slow property-info component lookup for a type.
+        $property = new HydratedProperty();
+        $property->allowsNull = $type->isNullable;
+        $property->builtIn = true;
+        $property->className = $firstTypeFound;
+        $property->collection = $propertyIsCollection;
+        $property->union = false;
+
+        return $property;
     }
 
     /**
      * From a class name, resolve a class alias.
-     *
-     * @internal Set to public for unit tests only.
      */
-    private static function resolveTypeFromClass(string $className, string $propertyName, string $type, bool $allowUnsafeClassResolution = false): ?string
+    private static function resolveTypeFromClass(string $className, string $propertyName, string $type): ?string
     {
-        $class = new \ReflectionClass($className);
-
-        if ($type === $class->getShortName()) {
-            return $class->getName();
-        }
-
-        if ($allowUnsafeClassResolution) {
-            if ($namespace = $class->getNamespaceName()) {
-                // This is wrong because we don't have file use statements.
-                // Local classes could be aliased and hidden.
-                $candidate = '\\'.$namespace.'\\'.$type;
-                if (\class_exists($candidate) || \interface_exists($candidate)) {
-                    return $candidate;
-                }
+        try {
+            $class = new \ReflectionClass($className);
+            if ($type === $class->getShortName()) {
+                // Class is in the root namespace.
+                return $class->getName();
             }
+        } catch (\Throwable $e) {
+            // Reflection did not find class.
+            return null;
         }
-
         return null;
     }
 
@@ -180,155 +309,102 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
     }
 
     /**
-     * Return an array of type definition arrays from an arbitrary doc block
-     *
-     * @internal Set to public for unit tests only.
-     *
-     * @return array[string,bool,bool]
+     * Find property type with raw doc block from reflexion.
      */
-    public static function extractTypesFromDocBlock(string $docBlock, bool &$stop = false): array
-    {
-        // This is where it becomes really ulgy.
-        $matches = [];
-        if (!\preg_match('/@var\s+([^\*\n@]+)/ums', $docBlock, $matches)) {
-            return [];
-        }
-
-        $ret = [];
-        try {
-            if (!$type = TypeParser::parse($matches[1])) {
-                $stop = true; // If we cannot parse it, DocBlock parser won't either.
-
-                return $ret;
-            }
-        } catch (\InvalidArgumentException $e) {
-            $stop = true; // If we cannot parse it, DocBlock parser won't either.
-
-            // Be silent when a PHP docbock contains typos.
-            return $ret;
-        }
-
-        $hasScalarType = false;
-
-        // We do not handle type recursivity, only base type matters here,
-        // so we will attempt to find the most generic type of the list.
-        // @todo current code will only take the first one.
-        if ($type->isCollection && $type->valueType) {
-            foreach ($type->valueType->internalTypes as $phpType) {
-                // Internal type reprensentation with uses a QDN which must be
-                // absolute, and unprefixed with '\\'. Else custom class resolver
-                // will fail when using CLASS::class constant.
-                $phpType = \trim($phpType, '\\');
-
-                if (!self::isTypeBlacklisted($phpType)) {
-                    $ret[] = [$phpType, $type->isCollection, $type->isNullable];
-                } else {
-                    $hasScalarType = true;
-                }
-            }
-        } else {
-            foreach ($type->internalTypes as $phpType) {
-                // Internal type reprensentation with uses a QDN which must be
-                // absolute, and unprefixed with '\\'. Else custom class resolver
-                // will fail when using CLASS::class constant.
-                $phpType = \trim($phpType, '\\');
-
-                if (!self::isTypeBlacklisted($phpType)) {
-                    $ret[] = [$phpType, $type->isCollection, $type->isNullable];
-                } else {
-                    $hasScalarType = true;
-                }
-            }
-        }
-
-        if ($hasScalarType) {
-            $stop = true; // Do not fallback to DocBlock parser.
-        }
-
-        return $ret;
-    }
-
-    /**
-     * Find property type with raw doc block from reflexion
-     *
-     * @return list<HydratedProperty>
-     */
-    private function findPropertyWithRawDocBlock(string $className, string $propertyName, \ReflectionProperty $property): array
+    private function findPropertyWithRawDocBlock(string $className, string $propertyName, \ReflectionProperty $property):  ?HydratedProperty
     {
         if (!$docBlock = $property->getDocComment()) {
-            return [];
+            return null;
+        }
+        if (!$property = self::extractTypesFromDocBlock($docBlock)) {
+            return null;
         }
 
-        // Arbitrary take the first, sorry.
-        // We don't support union types yet.
-        $ret = [];
-        foreach (self::extractTypesFromDocBlock($docBlock) as $array) {
-            if ($targetClassName = self::resolveTypeFromClassProperty($className, $propertyName, $array[0])) {
-                $ret[] = new HydratedProperty($propertyName, $targetClassName, $array[1], $array[2]);
+        if (!$property->builtIn) {
+            $targetClassName = self::resolveTypeFromClassProperty($className, $propertyName, $property->className);
+
+            if (!$targetClassName) {
+                // Class name resolution was incomplete an unsafe, do not let
+                // incomplete types pass, and let the property-info component
+                // find the right class.
+                return null;
             }
+
+            $property->className = $targetClassName;
         }
 
-        return $ret;
+        return $property;
     }
 
     /**
      * Find property type using symfony/property-info.
-     *
-     * @return list<HydratedProperty>
      */
-    private function findPropertyWithPropertyInfo(string $className, string $propertyName, \ReflectionProperty $property): array
+    private function findPropertyWithPropertyInfo(string $className, string $propertyName, \ReflectionProperty $property):  ?HydratedProperty
     {
         if (!$typeInfoExtractor = $this->getTypeInfoExtractor()) {
-            return [];
+            return null;
         }
         if (!$types = $typeInfoExtractor->getTypes($className, $property->getName())) {
-            return [];
+            return null;
         }
 
-        $ret = [];
         foreach ($types as $type) {
             \assert($type instanceof Type);
+
             if ($type->isCollection()) {
                 if ($targetClassName = $type->getCollectionValueType()->getClassName()) {
-                    $ret[] = new HydratedProperty($propertyName, $targetClassName, true, true);
+                    $property = new HydratedProperty();
+                    $property->allowsNull = true;
+                    $property->builtIn = false;
+                    $property->className = $targetClassName;
+                    $property->collection = true;
+                    $property->union = false;
+    
+                    return $property;
                 }
-            } else if ($targetClassName = $type->getClassName()) {
-                $ret[] = new HydratedProperty($propertyName, $targetClassName, false, $type->isNullable());
+            }
+
+            if ($targetClassName = $type->getClassName()) {
+                $property = new HydratedProperty();
+                $property->allowsNull = $type->isNullable();
+                $property->builtIn = false;
+                $property->className = $targetClassName;
+                $property->collection = false;
+                $property->union = false;
+
+                return $property;
             }
         }
 
-        return $ret;
+        return null;
     }
 
     /**
-     * Parse property definition
+     * Parse property definition.
      *
-     * @return list<HydratedProperty>
+     * @return HydratedProperty[]
      *   Multiple occurence of the same property can exist, if more than
      *   one allowed type was found.
      */
-    private function findPropertyDefinition(string $className, string $propertyName, \ReflectionProperty $property): array
+    private function findPropertyDefinition(string $className, string $propertyName, \ReflectionProperty $property):  ?HydratedProperty
     {
-        if ($ret = $this->findPropertyWithReflection($className, $propertyName, $property)) {
-            return [$ret];
+        $property =
+            $this->findPropertyWithReflection($className, $propertyName, $property) ??
+            $this->findPropertyWithRawDocBlock($className, $propertyName, $property) ??
+            $this->findPropertyWithPropertyInfo($className, $propertyName, $property)
+        ;
+
+        if ($property) {
+            $property->name = $propertyName;
         }
-        $stop = false;
-        if ($ret = $this->findPropertyWithRawDocBlock($className, $propertyName, $property, $stop)) {
-            return $ret;
-        }
-        if ($stop) {
-            return [];
-        }
-        if ($ret = $this->findPropertyWithPropertyInfo($className, $propertyName, $property)) {
-            return $ret;
-        }
-        return [];
+
+        return $property;
     }
 
     /**
      * Recursion to find all parent and traits included properties.
      *
-     * @return list<\ReflectionProperty>
+     * @return \ReflectionProperty[]
      */
     private function findAllProperties(?\ReflectionClass $class): array
     {
@@ -348,10 +424,10 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
     }
 
     /**
-     * Build hydration plan
+     * Build hydration plan.
      *
-     * @param list<string> $propertyBlackList
-     *   Properties to ignore
+     * @param string[] $propertyBlackList
+     *   Properties to ignore.
      */
     public function build(string $className, array $propertyBlackList = []): HydrationPlan
     {
@@ -360,9 +436,13 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
         $properties = [];
         foreach ($this->findAllProperties($ref) as $property) {
             \assert($property instanceof \ReflectionProperty);
-            foreach ($this->findPropertyDefinition($className, $property->getName(), $property) as $definition) {
-                $properties[] = $definition;
-                break; // We can only keep one, sorry.
+
+            if ($definition = $this->findPropertyDefinition($className, $property->getName(), $property)) {
+                // Ignore builtIn types, for now. PHP will handle them
+                // natively as soon as they are typed.
+                if (!$definition->builtIn) {
+                    $properties[] = $definition;
+                }
             }
         }
 

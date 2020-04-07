@@ -39,8 +39,12 @@ final class DefaultHydrationPlanTest extends TestCase
 
         self::assertTrue($hydrationPlan->isEmpty());
 
+        $property0 = new HydratedProperty();
+        $property0->name = 'property0';
+        $property0->className = 'Baz';
+
         $hydrationPlan = new DefaultHydrationPlan('Foo\\Bar', [
-            new HydratedProperty('property0', 'Baz'),
+            $property0,
         ]);
 
         self::assertFalse($hydrationPlan->isEmpty());

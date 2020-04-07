@@ -35,7 +35,7 @@ interface HydrationPlan
     /**
      * Get property list to hydrate.
      *
-     * @return list<HydratedProperty>
+     * @return HydratedProperty[]
      */
     public function getProperties(): array;
 }
