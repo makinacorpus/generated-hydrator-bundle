@@ -28,7 +28,7 @@ final class ReflectionHydrationPlanBuilderTest extends TestCase
     /**
      * Data provider
      */
-    public static function dataExtractTypesFromDocBlockSimple()
+    public static function dataExtractTypesFromDocBlock()
     {
         // Non nullables non collections
         yield ["/** @var \Some\Class */", 'Some\Class', false, false];
@@ -41,12 +41,28 @@ final class ReflectionHydrationPlanBuilderTest extends TestCase
         // Various collections
         yield ["/** @var \DateTime[] */", 'DateTime', false, true];
         yield ["/** @var ?\DateTimeInterface[] */", 'DateTimeInterface', true, true];
+
+        // Some advanced list types.
+        // @todo We parse them correctly, but there is no point in attempting
+        //   to guess "list of list of Foo" types, we won't do anything with it.
+        // yield ["/** @var list<Foo[]> */", 'Foo', false, true];
+        // yield ["/** @var list<string, Foo[]> */", 'Foo', false, true];
+        // yield ["/** @var ?list<Foo[]> */", 'Foo', true, true];
+        // yield ["/** @var ?list<string, Foo[]> */", 'Foo', true, true];
+        // yield ["/** @var null|list<Foo[]> */", 'Foo', true, true];
+        // yield ["/** @var null|list<string, Foo[]> */", 'Foo', true, true];
+        // yield ["/** @var array<Foo[]> */", 'Foo', false, true];
+        // yield ["/** @var array<string, Foo[]> */", 'Foo', false, true];
+        // yield ["/** @var ?array<Foo[]> */", 'Foo', true, true];
+        // yield ["/** @var ?array<string, Foo[]> */", 'Foo', true, true];
+        // yield ["/** @var null|array<Foo[]> */", 'Foo', true, true];
+        // yield ["/** @var null|array<string, Foo[]> */", 'Foo', true, true];
     }
 
     /**
-     * @dataProvider dataExtractTypesFromDocBlockSimple
+     * @dataProvider dataExtractTypesFromDocBlock
      */
-    public function testExtractTypesFromDocBlockSimple($docBlock, string $expected, bool $optional, bool $collection): void
+    public function testExtractTypesFromDocBlock($docBlock, string $expected, bool $optional, bool $collection): void
     {
         $types = ReflectionHydrationPlanBuilder::extractTypesFromDocBlock($docBlock);
 
@@ -54,6 +70,25 @@ final class ReflectionHydrationPlanBuilderTest extends TestCase
         self::assertSame($expected, $types[0][0]);
         self::assertSame($collection, $types[0][1]);
         self::assertSame($optional, $types[0][2]);
+    }
+
+    /**
+     * Data provider
+     */
+    public static function dataExtractTypesFromDocBlockWithScalars()
+    {
+        // Real use case of failing production code use cases.
+        yield ["/** @var array<string, string> */"];
+    }
+
+    /**
+     * @dataProvider dataExtractTypesFromDocBlockWithScalars
+     */
+    public function testExtractTypesFromDocBlockWithScalars($docBlock): void
+    {
+        $types = ReflectionHydrationPlanBuilder::extractTypesFromDocBlock($docBlock);
+
+        self::assertCount(0, $types);
     }
 
     public function testResolveTypeFromClassPropertyWithFqdn(): void

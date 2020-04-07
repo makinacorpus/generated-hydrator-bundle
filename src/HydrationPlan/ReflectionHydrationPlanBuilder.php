@@ -20,6 +20,7 @@ declare(strict_types=1);
 
 namespace GeneratedHydrator\Bridge\Symfony\HydrationPlan;
 
+use GeneratedHydrator\Bridge\Symfony\Utils\Parser\TypeParser;
 use Symfony\Component\PropertyInfo\PropertyInfoExtractor;
 use Symfony\Component\PropertyInfo\PropertyTypeExtractorInterface;
 use Symfony\Component\PropertyInfo\Type;
@@ -77,7 +78,12 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
      */
     public static function isTypeBlacklisted(string $type): bool
     {
-        return \in_array($type, ['bool', 'float', 'int', 'null', 'string', 'array']);
+        return \in_array($type, [
+            // PHP native types.
+            'bool', 'float', 'int', 'null', 'string', 'array',
+            // Commonly used list types.
+            'iterable', 'list', 'Traversable', 'Generator',
+        ]);
     }
 
     /**
@@ -180,55 +186,63 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
      *
      * @return array[string,bool,bool]
      */
-    public static function extractTypesFromDocBlock(string $docBlock): array
+    public static function extractTypesFromDocBlock(string $docBlock, bool &$stop = false): array
     {
         // This is where it becomes really ulgy.
         $matches = [];
-        if (!\preg_match('/@var\s+([^\s\n@]+)/ums', $docBlock, $matches)) {
+        if (!\preg_match('/@var\s+([^\*\n@]+)/ums', $docBlock, $matches)) {
             return [];
         }
 
-        $typeStrings = \array_unique(
-            \array_filter(
-                \array_map(
-                    '\trim',
-                    \explode('|', $matches[1])
-                )
-            )
-        );
+        $ret = [];
+        try {
+            if (!$type = TypeParser::parse($matches[1])) {
+                $stop = true; // If we cannot parse it, DocBlock parser won't either.
 
-        // If one occurence of 'null' or an unsupported type is found, we can
-        // consider the whole as optional, because we will not be able to
-        // normalize some variants of it.
-        $allAreOptional = false;
-        foreach ($typeStrings as $index => $type) {
-            if ('null' === $type || 'callable' === $type || 'resource' === $type) {
-                unset($typeStrings[$index]);
-                $allAreOptional = true;
+                return $ret;
+            }
+        } catch (\InvalidArgumentException $e) {
+            $stop = true; // If we cannot parse it, DocBlock parser won't either.
+
+            // Be silent when a PHP docbock contains typos.
+            return $ret;
+        }
+
+        $hasScalarType = false;
+
+        // We do not handle type recursivity, only base type matters here,
+        // so we will attempt to find the most generic type of the list.
+        // @todo current code will only take the first one.
+        if ($type->isCollection && $type->valueType) {
+            foreach ($type->valueType->internalTypes as $phpType) {
+                // Internal type reprensentation with uses a QDN which must be
+                // absolute, and unprefixed with '\\'. Else custom class resolver
+                // will fail when using CLASS::class constant.
+                $phpType = \trim($phpType, '\\');
+
+                if (!self::isTypeBlacklisted($phpType)) {
+                    $ret[] = [$phpType, $type->isCollection, $type->isNullable];
+                } else {
+                    $hasScalarType = true;
+                }
+            }
+        } else {
+            foreach ($type->internalTypes as $phpType) {
+                // Internal type reprensentation with uses a QDN which must be
+                // absolute, and unprefixed with '\\'. Else custom class resolver
+                // will fail when using CLASS::class constant.
+                $phpType = \trim($phpType, '\\');
+
+                if (!self::isTypeBlacklisted($phpType)) {
+                    $ret[] = [$phpType, $type->isCollection, $type->isNullable];
+                } else {
+                    $hasScalarType = true;
+                }
             }
         }
 
-        $ret = [];
-        foreach ($typeStrings as $type) {
-            if ($optional = '?' === $type[0]) {
-                $type = \substr($type, 1);
-            }
-            if ($collection = '[]' === \substr($type, -2)) {
-                $type = \substr($type, 0, -2);
-            }
-
-            // Proceed to a second removal pass now that '[]' and '?' have
-            // been stripped.
-            if (self::isTypeBlacklisted($type)) {
-                continue;
-            }
-
-            // Internal type reprensentation with uses a QDN which must be
-            // absolute, and unprefixed with '\\'. Else custom class resolver
-            // will fail when using CLASS::class constant.
-            $type = \trim($type, '\\');
-
-            $ret[] = [$type, $collection, $allAreOptional || $optional];
+        if ($hasScalarType) {
+            $stop = true; // Do not fallback to DocBlock parser.
         }
 
         return $ret;
@@ -298,8 +312,12 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
         if ($ret = $this->findPropertyWithReflection($className, $propertyName, $property)) {
             return [$ret];
         }
-        if ($ret = $this->findPropertyWithRawDocBlock($className, $propertyName, $property)) {
+        $stop = false;
+        if ($ret = $this->findPropertyWithRawDocBlock($className, $propertyName, $property, $stop)) {
             return $ret;
+        }
+        if ($stop) {
+            return [];
         }
         if ($ret = $this->findPropertyWithPropertyInfo($className, $propertyName, $property)) {
             return $ret;
