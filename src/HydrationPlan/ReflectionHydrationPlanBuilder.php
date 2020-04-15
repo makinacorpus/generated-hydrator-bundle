@@ -195,8 +195,8 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
                 // will not succeeed either, so drop from here.
                 return HydratedProperty::empty();
             }
-        } catch (\InvalidArgumentException $e) {
-            // Be silent when a PHP docbock contains typos.
+        } catch (\Exception $e) {
+            // Be silent when a PHP docblock contains typos.
             return null;
         }
 
