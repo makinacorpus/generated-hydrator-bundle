@@ -22,6 +22,7 @@ namespace GeneratedHydrator\Bridge\Symfony\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use GeneratedHydrator\Bridge\Symfony\Utils\Parser\TypeParser;
+use GeneratedHydrator\Bridge\Symfony\Utils\Parser\TypeParserException;
 
 final class TypeParserTest extends TestCase
 {
@@ -35,42 +36,49 @@ final class TypeParserTest extends TestCase
     {
         self::markTestSkipped("Fix this behaviour");
 
+        self::expectException(TypeParserException::class);
         self::expectExceptionMessage("Cannot open genericity '<' after '[]' declaration at position #5");
         TypeParser::parse('Foo[]<Bar>');
     }
 
     public function testCannotStartWithOpeningTag(): void
     {
+        self::expectException(TypeParserException::class);
         self::expectExceptionMessage("Type declaration cannot start with '<' at position #1");
         TypeParser::parse(' <Foo');
     }
 
     public function testCannotStartWithClosingTag(): void
     {
+        self::expectException(TypeParserException::class);
         self::expectExceptionMessage("Type declaration cannot start with '>' at position #2");
         TypeParser::parse('  >Foo');
     }
 
     public function testCannotCloseNonOpenedTag(): void
     {
+        self::expectException(TypeParserException::class);
         self::expectExceptionMessage("Non opened type closing '>' at position #3");
         TypeParser::parse('Foo>');
     }
 
     public function testCannotStartWithComma(): void
     {
+        self::expectException(TypeParserException::class);
         self::expectExceptionMessage("Type declaration cannot start with ',' at position #0");
         TypeParser::parse(',Foo>');
     }
 
     public function testCannotPutCommaWithoutGeneric(): void
     {
+        self::expectException(TypeParserException::class);
         self::expectExceptionMessage("Misplaced ',' at position #3");
         TypeParser::parse('Foo,');
     }
 
     public function testCannotPutTwoComma(): void
     {
+        self::expectException(TypeParserException::class);
         self::expectExceptionMessage("Misplaced ',' at position #13");
         TypeParser::parse('array<Foo,Bar,Baz>');
     }
@@ -79,6 +87,7 @@ final class TypeParserTest extends TestCase
     {
         self::markTestSkipped("Fix this behaviour");
 
+        self::expectException(TypeParserException::class);
         self::expectExceptionMessage("Misplaced ',' at position #6");
         TypeParser::parse('array<,Foo>');
     }
@@ -87,6 +96,7 @@ final class TypeParserTest extends TestCase
     {
         self::markTestSkipped("Fix this behaviour");
 
+        self::expectException(TypeParserException::class);
         self::expectExceptionMessage("Misplaced ',' at position #9");
         TypeParser::parse('array<Foo,>');
     }

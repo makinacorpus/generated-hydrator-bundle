@@ -21,6 +21,7 @@ declare(strict_types=1);
 namespace GeneratedHydrator\Bridge\Symfony\HydrationPlan;
 
 use GeneratedHydrator\Bridge\Symfony\Utils\Parser\TypeParser;
+use GeneratedHydrator\Bridge\Symfony\Utils\Parser\TypeParserException;
 use Symfony\Component\PropertyInfo\PropertyInfoExtractor;
 use Symfony\Component\PropertyInfo\PropertyTypeExtractorInterface;
 use Symfony\Component\PropertyInfo\Type;
@@ -195,8 +196,8 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
                 // will not succeeed either, so drop from here.
                 return HydratedProperty::empty();
             }
-        } catch (\InvalidArgumentException $e) {
-            // Be silent when a PHP docbock contains typos.
+        } catch (TypeParserException $e) {
+            // Be silent when a PHP docblock contains typos.
             return null;
         }
 
@@ -359,7 +360,7 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
                     $property->className = $targetClassName;
                     $property->collection = true;
                     $property->union = false;
-    
+
                     return $property;
                 }
             }

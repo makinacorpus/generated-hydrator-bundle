@@ -89,7 +89,7 @@ final class TypeParser
 
             if ('<' === $value) {
                 if (!$current) {
-                    throw new \Exception("Type declaration cannot start with '<' at position #".$startsAt);
+                    throw new TypeParserException("Type declaration cannot start with '<' at position #".$startsAt);
                 }
                 $currentIsKey = true;
 
@@ -103,10 +103,10 @@ final class TypeParser
 
             } else if (',' === $value) {
                 if (!$current) {
-                    throw new \Exception("Type declaration cannot start with ',' at position #".$startsAt);
+                    throw new TypeParserException("Type declaration cannot start with ',' at position #".$startsAt);
                 }
                 if (!$currentIsKey || !$parent || !$parent->isGeneric) {
-                    throw new \Exception("Misplaced ',' at position #".$startsAt);
+                    throw new TypeParserException("Misplaced ',' at position #".$startsAt);
                 }
                 $currentIsKey = false;
 
@@ -118,10 +118,10 @@ final class TypeParser
 
             } else if ('>' === $value) {
                 if (!$current) {
-                    throw new \Exception("Type declaration cannot start with '>' at position #".$startsAt);
+                    throw new TypeParserException("Type declaration cannot start with '>' at position #".$startsAt);
                 }
                 if (!$parent) {
-                    throw new \Exception("Non opened type closing '>' at position #".$startsAt);
+                    throw new TypeParserException("Non opened type closing '>' at position #".$startsAt);
                 }
 
                 // Check if parent was a collection or not.
@@ -138,7 +138,7 @@ final class TypeParser
 
             } else if ('|' === $value) {
                 if (!$current || (!$current->internalTypes && !$current->isNullable)) {
-                    throw new \Exception("Type declaration cannot start with '|' at position #".$startsAt);
+                    throw new TypeParserException("Type declaration cannot start with '|' at position #".$startsAt);
                 }
                 // In all cases, just ignore "|".
             } else {
