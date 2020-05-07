@@ -44,6 +44,10 @@ services:
         alias: generated_hydrator.deep
 
     # Alias for argument resolvers
+    GeneratedHydrator\Bridge\Symfony\DeepHydrator:
+        alias: generated_hydrator.deep
+
+    # Alias for argument resolvers
     GeneratedHydrator\Bridge\Symfony\Hydrator:
         alias: generated_hydrator
 
