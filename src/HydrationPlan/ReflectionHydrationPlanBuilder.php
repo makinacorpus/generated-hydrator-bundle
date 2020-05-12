@@ -187,7 +187,7 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
         // This is where it becomes really ulgy.
         $matches = [];
         if (!\preg_match('/@var\s+([^\*\n@]+)/ums', $docBlock, $matches)) {
-            return [];
+            return null;
         }
 
         try {
