@@ -81,7 +81,6 @@ final class DeepHydrator implements Hydrator
         foreach ($hydrationPlan->getProperties() as $property) {
             \assert($property instanceof HydratedProperty);
 
-            // @todo Should we really handle collections as well?
             $propertyName = $property->name;
 
             if (null === ($value = $values[$propertyName] ?? null)) {
@@ -95,6 +94,12 @@ final class DeepHydrator implements Hydrator
             if ($value instanceof $property->className) {
                 // Property is already an object with the right class, let it
                 // pass gracefully the caller already has hydrated the object.
+                continue;
+            }
+
+            if ($property->collection) {
+                // @todo
+                // Deal with collections properly.
                 continue;
             }
 
