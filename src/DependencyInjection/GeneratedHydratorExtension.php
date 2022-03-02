@@ -62,7 +62,7 @@ final class GeneratedHydratorExtension extends Extension
 
         $definition = new Definition();
         $definition->setClass(Psr4Factory::class);
-        $definition->setPrivate(true);
+        $definition->setPublic(false);
         $definition->setArguments([
             $config['psr4_source_directory'],
             $config['psr4_namespace_prefix'],

@@ -20,11 +20,10 @@ declare(strict_types=1);
 
 namespace GeneratedHydrator\Bridge\Symfony;
 
-use CodeGenerationUtils\GeneratorStrategy\FileWriterGeneratorStrategy;
 use GeneratedHydrator\Configuration;
 use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Configuration;
 use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Factory;
-use Zend\Hydrator\HydratorInterface;
+use Laminas\Hydrator\HydratorInterface;
 
 /**
  * Provide a front-end for hydrating objects.
