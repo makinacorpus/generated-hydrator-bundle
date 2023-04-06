@@ -24,6 +24,7 @@ use GeneratedHydrator\Bridge\Symfony\DefaultHydrator;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\ErrorHandler\DebugClassLoader;
 
 /**
  * @codeCoverageIgnore
@@ -76,7 +77,15 @@ final class GenerateCommand extends Command
                 continue;
             }
 
-            $written = $this->hydrator->regenerateHydrator($className);
+            try {
+                $written = $this->hydrator->regenerateHydrator($className);
+            } catch (\Throwable $e) {
+                if (false !== \strpos($e->getFile(), 'DebugClassLoader')) {
+                    $output->writeln("<error>" . \sprintf("Symfony's %s in some versions will prevent this to work, run 'APP_DEBUG=false bin/console generated-hydrator:generate' to disable it.", DebugClassLoader::class) . "</error>");
+                }
+
+                return self::FAILURE;
+            }
             $output->writeln($className." -> ".$written['class']." in ".$written['filename']);
         }
 
