@@ -22,6 +22,7 @@ namespace GeneratedHydrator\Bridge\Symfony;
 
 use GeneratedHydrator\Bridge\Symfony\DependencyInjection\GeneratedHydratorExtension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 
 /**
@@ -39,7 +40,7 @@ final class GeneratedHydratorBundle extends Bundle
     /**
      * {@inheritdoc}
      */
-    public function getContainerExtension()
+    public function getContainerExtension(): ?ExtensionInterface
     {
         return new GeneratedHydratorExtension();
     }
