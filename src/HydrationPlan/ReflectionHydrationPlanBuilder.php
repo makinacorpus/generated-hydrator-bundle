@@ -353,15 +353,24 @@ final class ReflectionHydrationPlanBuilder implements HydrationPlanBuilder
             \assert($type instanceof Type);
 
             if ($type->isCollection()) {
-                if ($targetClassName = $type->getCollectionValueType()->getClassName()) {
-                    $property = new HydratedProperty();
-                    $property->allowsNull = true;
-                    $property->builtIn = false;
-                    $property->className = $targetClassName;
-                    $property->collection = true;
-                    $property->union = false;
+                if (\method_exists($type, 'getCollectionValueType')) {
+                    // Symfony <= 5.x
+                    $types = [$type->getCollectionValueType()];
+                } else {
+                    // Symfony >= 6.0
+                    $types = $type->getCollectionValueTypes();
+                }
+                foreach ($types as $subType) {
+                    if ($targetClassName = $subType->getClassName()) {
+                        $property = new HydratedProperty();
+                        $property->allowsNull = true;
+                        $property->builtIn = false;
+                        $property->className = $targetClassName;
+                        $property->collection = true;
+                        $property->union = false;
 
-                    return $property;
+                        return $property;
+                    }
                 }
             }
 
