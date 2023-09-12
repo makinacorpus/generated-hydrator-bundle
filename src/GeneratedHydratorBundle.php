@@ -21,6 +21,8 @@ declare(strict_types=1);
 namespace GeneratedHydrator\Bridge\Symfony;
 
 use GeneratedHydrator\Bridge\Symfony\DependencyInjection\GeneratedHydratorExtension;
+use GeneratedHydrator\Bridge\Symfony\DependencyInjection\Compiler\RegisterValueHydratorPass;
+use GeneratedHydrator\Bridge\Symfony\ValueHydrator\ValueHydrator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
@@ -36,9 +38,16 @@ final class GeneratedHydratorBundle extends Bundle
      */
     public function build(ContainerBuilder $container)
     {
+        $container->addCompilerPass(new RegisterValueHydratorPass());
+
         $container
             ->registerForAutoconfiguration(HydratorAware::class)
             ->addMethodCall('setObjectHydrator', [new Reference(Hydrator::class)])
+        ;
+
+        $container
+            ->registerForAutoconfiguration(ValueHydrator::class)
+            ->addTag('generated_hydrator.value_hydrator')
         ;
     }
 
