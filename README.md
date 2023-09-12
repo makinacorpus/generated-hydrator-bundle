@@ -111,6 +111,8 @@ if you don't want to implement the `setObjectHydrator()` method by yourself.
 
 # Usage
 
+## Basic usage
+
 Inject the `generated_hydrator` service, or type hint with
 `GeneratedHydrator\Bridge\Symfony\Hydrator` for auto-wiring.
 
@@ -153,6 +155,110 @@ function some_function(Hydrator $hydrator)
     $valueArray = $hydrator->extract($object);
 }
 ```
+
+
+## Value hydrator
+
+Let's consider you have the following class:
+
+```php
+namespace App\Entity;
+
+interface Identifier
+{
+    public function __construct(mixed $value);
+
+    public function __toString(): string;
+}
+
+class FooId
+{
+    public function __construct(
+        private mixed $value,
+    ) {}
+
+    public function __toString(): string
+    {
+        return (string) $this->id;
+    }
+}
+```
+
+And use it as an identifier class for the following entity class:
+
+```php
+namespace App\Entity;
+
+class Foo
+{
+    public function __construct(
+        private FooId $id,
+    ) {}
+
+    // ...
+}
+```
+
+If you need to hydrate some `Foo` instance using the following data from database:
+
+```php
+$foo = $hydrator->createAndHydrate(
+    \App\Entity\Foo::class,
+    [
+        'id' => '12345',
+    ],
+);
+```
+
+This will fail because the `$id` parameter cannot accept a `string` value.
+
+If you use the same pattern all over your site, you might want to use a global
+value hydrator, as such:
+
+```php
+namespace App\ValueHydrator;
+
+use App\Entity\Identifier;
+use GeneratedHydrator\Bridge\Symfony\Error\CannotHydrateValueError;
+use GeneratedHydrator\Bridge\Symfony\ValueHydrator\ValueHydrator;
+
+class IdentifierValueHydrator implements ValueHydrator
+{
+    /**
+     * {@inheritdoc}
+     */
+    public function supports(string $phpType): bool
+    {
+        return \is_subclass_of($phpType, Identifier::class);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function hydrate(string $phpType, mixed $value): mixed
+    {
+        if (\is_subclass_of($phpType, Identifier::class)) {
+            return new $phpType($value);
+        }
+        throw new CannotHydrateValueError();
+    }
+}
+```
+
+And register it either by explicitely setting the `generated_hydrator.value_hydrator`
+service tag, or by adding into the container using `autowiring` and `autoconfiguration`
+set to `true` on this service:
+
+```yaml
+services:
+    App\ValueHydrator\IdentifierValueHydrator:
+        autowire: true
+        autoconfigure: true
+```
+
+Once this set, each property value that needs to be hydrated implementing
+your `App\Entity\Identifier` interface will have its value correctly
+instanciated automatically.
 
 
 # Some notes
