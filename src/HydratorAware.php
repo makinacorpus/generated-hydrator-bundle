@@ -20,33 +20,10 @@ declare(strict_types=1);
 
 namespace GeneratedHydrator\Bridge\Symfony;
 
-use GeneratedHydrator\Bridge\Symfony\DependencyInjection\GeneratedHydratorExtension;
-use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\DependencyInjection\Reference;
-use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
-use Symfony\Component\HttpKernel\Bundle\Bundle;
-
-/**
- * @codeCoverageIgnore
- */
-final class GeneratedHydratorBundle extends Bundle
+interface HydratorAware
 {
     /**
-     * {@inheritdoc}
+     * Enables dependency injection.
      */
-    public function build(ContainerBuilder $container)
-    {
-        $container
-            ->registerForAutoconfiguration(HydratorAware::class)
-            ->addMethodCall('setObjectHydrator', [new Reference(Hydrator::class)])
-        ;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getContainerExtension(): ?ExtensionInterface
-    {
-        return new GeneratedHydratorExtension();
-    }
+    public function setObjectHydrator(Hydrator $hydrator): void;
 }
