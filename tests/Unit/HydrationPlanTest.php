@@ -20,30 +20,31 @@ declare(strict_types=1);
 
 namespace GeneratedHydrator\Bridge\Symfony\Tests\Unit;
 
-use PHPUnit\Framework\TestCase;
-use GeneratedHydrator\Bridge\Symfony\HydrationPlan\DefaultHydrationPlan;
 use GeneratedHydrator\Bridge\Symfony\HydrationPlan\HydratedProperty;
+use GeneratedHydrator\Bridge\Symfony\HydrationPlan\HydrationPlan;
+use PHPUnit\Framework\TestCase;
 
-final class DefaultHydrationPlanTest extends TestCase
+final class HydrationPlanTest extends TestCase
 {
     public function testGetClassName(): void
     {
-        $hydrationPlan = new DefaultHydrationPlan('Foo\\Bar', []);
+        $hydrationPlan = new HydrationPlan('Foo\\Bar', []);
 
         self::assertSame('Foo\\Bar', $hydrationPlan->getClassName());
     }
 
     public function testIsEmpty(): void
     {
-        $hydrationPlan = new DefaultHydrationPlan('Foo\\Bar', []);
+        $hydrationPlan = new HydrationPlan('Foo\\Bar', []);
 
         self::assertTrue($hydrationPlan->isEmpty());
 
-        $property0 = new HydratedProperty();
-        $property0->name = 'property0';
-        $property0->className = 'Baz';
+        $property0 = new HydratedProperty(
+            name: 'property0',
+            className: 'Baz',
+        );
 
-        $hydrationPlan = new DefaultHydrationPlan('Foo\\Bar', [
+        $hydrationPlan = new HydrationPlan('Foo\\Bar', [
             $property0,
         ]);
 
@@ -54,7 +55,7 @@ final class DefaultHydrationPlanTest extends TestCase
     {
         self::expectExceptionMessageMatches('@' . \str_replace('\\', '\\\\', HydratedProperty::class ) . '@');
 
-        new DefaultHydrationPlan('Foo\\Bar', [
+        new HydrationPlan('Foo\\Bar', [
             'foo' => new \DateTime(),
         ]);
     }

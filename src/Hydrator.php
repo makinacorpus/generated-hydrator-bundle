@@ -28,15 +28,15 @@ interface Hydrator
     /**
      * Hydrate object
      */
-    public function hydrate(object $object, array $values): void;
+    public function hydrate(object $object, array $values, ?string $context = null): void;
 
     /**
      * Create instance and hydrate object
      */
-    public function createAndHydrate(string $className, array $values): object;
+    public function createAndHydrate(string $className, array $values, ?string $context = null): object;
 
     /**
      * Extract object
      */
-    public function extract(object $object): array;
+    public function extract(object $object, ?string $context = null): array;
 }

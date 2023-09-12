@@ -21,8 +21,6 @@ declare(strict_types=1);
 namespace GeneratedHydrator\Bridge\Symfony;
 
 use GeneratedHydrator\Configuration;
-use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Configuration;
-use GeneratedHydrator\Bridge\Symfony\Utils\Psr4Factory;
 use Laminas\Hydrator\HydratorInterface;
 
 /**
@@ -30,52 +28,28 @@ use Laminas\Hydrator\HydratorInterface;
  */
 final class DefaultHydrator implements Hydrator
 {
-    /** Generates hydrator classes into Symfony cache directory */
-    const MODE_CACHE = 'cache';
-
-    /** Generates hydrator classes into your app namespace */
-    const MODE_PSR4 = 'psr4';
-
-    /** @var string */
-    private $generatedClassesTargetDir;
-
-    /** @var string */
-    private $defaultMode = self::MODE_CACHE;
-
     /** @var array<string, HydratorInterface> */
-    private $hydrators = [];
-
-    /** @var array<string, scalar> */
-    private $userConfiguration = [];
-
+    private array $hydrators = [];
     /** @var array<string, \ReflectionClass> */
-    private $reflectionClasses = [];
+    private array $reflectionClasses = [];
 
-    /** @var null|Psr4Factory */
-    private $psr4factory;
+    public function __construct(
+        private string $generatedClassesTargetDir,
+        /** @var array<string, scalar> */
+        private array $userConfiguration = []
+    ) {}
 
-    /**
-     * Default constructor
-     */
-    public function __construct(string $generatedClassesTargetDir, array $userConfiguration = [], string $defaultMode = self::MODE_CACHE)
+    private function getHydrator(string $className): HydratorInterface
     {
-        $this->defaultMode = $defaultMode;
-        $this->generatedClassesTargetDir = $generatedClassesTargetDir;
-        $this->userConfiguration = $userConfiguration; // @todo validate it (using option resolver)?
+        return $this->hydrators[$className] ?? ($this->hydrators[$className] = $this->createHydrator($className));
     }
 
-    /**
-     * Set PSR-4 factory
-     */
-    public function setPsr4Factory(Psr4Factory $psr4factory): void
+    private function createHydrator(string $className): HydratorInterface
     {
-        $this->psr4factory = $psr4factory;
+        return $this->getHydratorConfiguration($className)->createFactory()->getHydrator();
     }
 
-    /**
-     * Create hydrator configuration
-     */
-    private function createConfiguration(string $className): Configuration
+    private function getHydratorConfiguration(string $className): Configuration
     {
         $userConfiguration = \array_replace([
             'mode' => $this->defaultMode,
@@ -85,42 +59,8 @@ final class DefaultHydrator implements Hydrator
             'target_dir' => $this->generatedClassesTargetDir,
         ], $this->userConfiguration[$className] ?? []);
 
-        // @todo
-        //    - global mode (cache or psr4)
-        //    - create symfony configuration with documentation
-        //    - create default class name inflectors and file locators depending upon mode
-        //    - if psr4 et no configuration, create a configuration with mode
-        //    - basic bundle unit tests
-        //    - psr4 mode heavy unit tests
-        //    - coverage tests
-        //    - configuration per namespace (e.g. "App\Domain\Model\*") instead of per class
-        //    - test hydrate/extract/createAndHydrate
-        // @todo later
-        //    - instantiatior for classes
-        //    - nested objects hydration (normalization)
-
-        switch ($userConfiguration['mode']) {
-
-            case self::MODE_CACHE:
-                $configuration = new Configuration($className);
-                $configuration->setGeneratedClassesTargetDir($userConfiguration['target_dir']);
-                break;
-
-            case self::MODE_PSR4:
-                if (!$this->psr4factory) {
-                    throw new \LogicException("No PSR-4 factory was provided");
-                }
-                $configuration = new Psr4Configuration($className);
-                $configuration->setPsr4Factory($this->psr4factory);
-                break;
-
-            default:
-                throw new \InvalidArgumentException(\sprintf(
-                    "'%s' mode for class '%s' hydrator is not supported, allowed values are: '%s'",
-                    $userConfiguration['mode'], $className,
-                    \implode("', '", [self::MODE_PSR4, self::MODE_CACHE])
-                ));
-        }
+        $configuration = new Configuration($className);
+        $configuration->setGeneratedClassesTargetDir($userConfiguration['target_dir']);
 
         // Let those values override the default one above.
         if ($value = ($userConfiguration['auto_generate_proxies'] ?? null)) {
@@ -130,39 +70,20 @@ final class DefaultHydrator implements Hydrator
             $configuration->setHydratedClassName($value);
         }
         if ($value = ($userConfiguration['class_namespace'] ?? null)) {
-            $configuration->setGeneratedClassesNamespace($value);
+            $this->configuration->setGeneratedClassesNamespace($value);
         }
 
-        return $configuration;
+        return $this->configuration = $configuration;
     }
 
     /**
-     * Create hydrator for class
-     */
-    private function createHydrator(string $className): HydratorInterface
-    {
-        $hydratorClassName = $this
-            ->createConfiguration($className)
-            ->createFactory()
-            ->getHydratorClass() // @todo getHydrator() directly in future versions
-        ;
-
-        return new $hydratorClassName();
-    }
-
-    /**
-     * Regenerate hydrator
+     * Force hydrator regeneration if dumped as a file.
      */
     public function regenerateHydrator(string $className): array
     {
-        $configuration = $this->createConfiguration($className);
+        $configuration = $this->getHydratorConfiguration($className);
         $targetClassName = $configuration->getClassNameInflector()->getGeneratedClassName($className);
-
-        if ($configuration instanceof Psr4Configuration) {
-            $targetFileName = $this->psr4factory->getFileLocator()->getGeneratedClassFileName($targetClassName);
-        } else {
-            $targetFileName = '(in cache)';
-        }
+        $targetFileName = '(in cache)';
 
         /*
          * @todo find a way to do this properly, we can't do it after we
@@ -180,26 +101,13 @@ final class DefaultHydrator implements Hydrator
 
         $configuration->createFactory()->getHydratorClass();
 
-        return [
-            'class' => $targetClassName,
-            'filename' => $targetFileName,
-        ];
-    }
-
-    /**
-     * Get hydrator for class
-     */
-    private function getHydrator(string $className): HydratorInterface
-    {
-        return $this->hydrators[$className] ?? (
-            $this->hydrators[$className] = $this->createHydrator($className)
-        );
+        return ['class' => $targetClassName, 'filename' => $targetFileName];
     }
 
     /**
      * {@inheritdoc}
      */
-    public function hydrate(object $object, array $values): void
+    public function hydrate(object $object, array $values, ?string $context = null): void
     {
         $this->getHydrator(\get_class($object))->hydrate($values, $object);
     }
@@ -207,11 +115,9 @@ final class DefaultHydrator implements Hydrator
     /**
      * {@inheritdoc}
      */
-    public function createAndHydrate(string $className, array $values): object
+    public function createAndHydrate(string $className, array $values, ?string $context = null): object
     {
-        $reflection = $this->reflectionClasses[$className] ?? (
-            $this->reflectionClasses[$className] = new \ReflectionClass($className)
-        );
+        $reflection = $this->reflectionClasses[$className] ?? ($this->reflectionClasses[$className] = new \ReflectionClass($className));
         \assert($reflection instanceof \ReflectionClass);
 
         $object = $reflection->newInstanceWithoutConstructor();
@@ -223,7 +129,7 @@ final class DefaultHydrator implements Hydrator
     /**
      * {@inheritdoc}
      */
-    public function extract(object $object): array
+    public function extract(object $object, ?string $context = null): array
     {
         return $this->getHydrator(\get_class($object))->extract($object);
     }

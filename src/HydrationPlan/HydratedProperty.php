@@ -22,25 +22,36 @@ namespace GeneratedHydrator\Bridge\Symfony\HydrationPlan;
 
 /**
  * @internal
+ *
+ * Represent a typed object property, such as:
+ *   - int $foo
+ *   - \Some\Class $foo
+ *   - ?\Some\Class $foo
+ *   - int|string|\Some\Class $foo
+ *
+ * It can represent a value collection, such as:
+ *   - int[] $foo
+ *   - \Some\Class[] $foo
+ *   - array<int|string|\Some\Class> $foo
+ *
+ * But it cannot represent a union type of a collection and a non
+ * collection types.
  */
 final class HydratedProperty
 {
-    public string $name;
-    /** Class name to use for hydrating/denormalizing this property. */
-    public string $className;
-    public bool $builtIn = false;
-    public bool $union = false;
-    public bool $allowsNull = true;
-    public bool $collection = false;
-
-    public function empty(): HydratedProperty
-    {
-        $property = new HydratedProperty();
-        $property->allowsNull = true;
-        $property->builtIn = true;
-        $property->className = 'mixed';
-        $property->union = false;
-
-        return $property;
-    }
+    public function __construct(
+        public readonly string $className,
+        /** PHP property name. */
+        public readonly string $name,
+        /** Remote contextual property name. */
+        public readonly ?string $alias = null,
+        /** PHP native type names, empty means unknown. */
+        public readonly array $nativeTypes = [],
+        public readonly bool $allowsNull = true,
+        public readonly bool $collection = false,
+        /** @todo Unused for now. */
+        public readonly ?string $collectionType = null,
+        /** Was typed determined completely. */
+        public readonly bool $complete = true,
+    ) {}
 }

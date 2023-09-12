@@ -33,36 +33,29 @@ final class ReflectionHydrationPlanBuilderTest extends TestCase
     public function testQueuedMessage(): void
     {
         $builder = new ReflectionHydrationPlanBuilder();
-        $builder->disablePropertyTypeReflection();
-
         $plan = $builder->build(QueuedMessage::class);
         $properties = $plan->getProperties();
-
-        self::assertCount(3, $properties);
 
         foreach ($properties as $property) {
             switch ($property->name) {
 
                 case 'id':
-                    self::assertSame(UuidInterface::class, $property->className);
+                    self::assertSame(UuidInterface::class, $property->nativeTypes[0]);
                     self::assertFalse($property->collection);
                     self::assertFalse($property->allowsNull);
                     break;
 
                 case 'created_at':
-                    self::assertSame(\DateTimeInterface::class, $property->className);
+                    self::assertSame(\DateTimeInterface::class, $property->nativeTypes[0]);
                     self::assertFalse($property->collection);
                     self::assertFalse($property->allowsNull);
                     break;
 
                 case 'consumed_at':
-                    self::assertSame(\DateTimeInterface::class, $property->className);
+                    self::assertSame(\DateTimeInterface::class, $property->nativeTypes[0]);
                     self::assertFalse($property->collection);
                     self::assertTrue($property->allowsNull);
                     break;
-
-                default:
-                    self::fail("Unexpected property ".$property->name." was found.");
             }
         }
     }

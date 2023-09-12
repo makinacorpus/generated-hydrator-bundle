@@ -33,21 +33,12 @@ final class GenerateCommand extends Command
 {
     protected static $defaultName = 'generated-hydrator:generate';
 
-    /** @var DefaultHydrator */
-    private $hydrator;
 
-    /** @var string[] */
-    private $classList;
-
-    /**
-     * Default constructor
-     */
-    public function __construct(DefaultHydrator $hydrator, array $classList)
+    public function __construct(
+        private DefaultHydrator $hydrator,
+        private array $classList)
     {
         parent::__construct();
-
-        $this->hydrator = $hydrator;
-        $this->classList = $classList;
     }
 
     /**

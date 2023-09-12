@@ -20,52 +20,62 @@ declare(strict_types=1);
 
 namespace GeneratedHydrator\Bridge\Symfony;
 
+use GeneratedHydrator\Bridge\Symfony\Error\CannotHydrateValueError;
 use GeneratedHydrator\Bridge\Symfony\HydrationPlan\HydratedProperty;
 use GeneratedHydrator\Bridge\Symfony\HydrationPlan\HydrationPlan;
 use GeneratedHydrator\Bridge\Symfony\HydrationPlan\HydrationPlanBuilder;
 use GeneratedHydrator\Bridge\Symfony\HydrationPlan\ReflectionHydrationPlanBuilder;
-use GeneratedHydrator\Bridge\Symfony\Utils\ClassBlacklist;
 
 /**
  * Use hydration plan to hydrated nested/deep objects graphs.
  */
 final class DeepHydrator implements Hydrator
 {
-    /** @var ClassBlacklist */
-    private $classBlacklist;
-
-    /** @var Hydrator */
-    private $hydrator;
-
-    /** @var HydrationPlanBuilder */
-    private $hydrationPlanBuilder;
-
+    private ClassBlacklist $classBlacklist;
+    private Hydrator $decorated;
+    private HydrationPlanBuilder $hydrationPlanBuilder;
     /** @var array<string, HydrationPlan> */
-    private $hydrationPlan = [];
+    private array $hydrationPlan = [];
 
-    /**
-     * Default constructor
-     */
-    public function __construct(Hydrator $hydrator, ?HydrationPlanBuilder $hydrationPlanBuilder = null, ?ClassBlacklist $classBlacklist = null)
-    {
-        $this->hydrator = $hydrator;
+    public function __construct(
+        Hydrator $decorated,
+        ?HydrationPlanBuilder $hydrationPlanBuilder = null,
+        ?ClassBlacklist $classBlacklist = null,
+    ) {
+        $this->decorated = $decorated;
         $this->hydrationPlanBuilder = $hydrationPlanBuilder ?? new ReflectionHydrationPlanBuilder();
         $this->classBlacklist = $classBlacklist ?? new ClassBlacklist();
     }
 
     /**
-     * Get hydration plan for class
+     * {@inheritdoc}
      */
-    private function getHydrationPlan(string $className): HydrationPlan
+    public function hydrate(object $object, array $values, ?string $context = null): void
     {
-        return $this->hydrationPlan[$className] ?? (
-            $this->hydrationPlan[$className] = $this->hydrationPlanBuilder->build($className)
-        );
+        $this->decorated->hydrate($this->hydrateValues(\get_class($object), $values), $object,);
     }
 
     /**
-     * Process nested object hydration
+     * {@inheritdoc}
      */
+    public function createAndHydrate(string $className, array $values, ?string $context = null): object
+    {
+        return $this->decorated->createAndHydrate($className, $this->hydrateValues($className, $values));
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function extract(object $object, ?string $context = null): array
+    {
+        return $this->extractValues(\get_class($object), $this->decorated->extract($object));
+    }
+
+    private function getHydrationPlan(string $className): HydrationPlan
+    {
+        return $this->hydrationPlan[$className] ?? ($this->hydrationPlan[$className] = $this->hydrationPlanBuilder->build($className));
+    }
+
     private function hydrateValues(string $className, array $values): array
     {
         $hydrationPlan = $this->getHydrationPlan($className);
@@ -81,6 +91,7 @@ final class DeepHydrator implements Hydrator
         foreach ($hydrationPlan->getProperties() as $property) {
             \assert($property instanceof HydratedProperty);
 
+            $isTypeCompatible = false;
             $propertyName = $property->name;
 
             if (null === ($value = $values[$propertyName] ?? null)) {
@@ -91,21 +102,37 @@ final class DeepHydrator implements Hydrator
                 continue;
             }
 
-            if ($value instanceof $property->className) {
-                // Property is already an object with the right class, let it
-                // pass gracefully the caller already has hydrated the object.
+            foreach ($property->nativeTypes as $phpType) {
+                if ($value instanceof $phpType) {
+                    // Property is already an object with the right class, let it
+                    // pass gracefully the caller already has hydrated the object.
+                    $isTypeCompatible = true;
+                    break;
+                }
+            }
+
+            if ($isTypeCompatible) {
                 continue;
             }
 
             if ($property->collection) {
-                // @todo
-                // Deal with collections properly.
+                // @todo Deal with collections properly.
                 continue;
             }
 
-            if (\is_array($value)) {
-                $values[$propertyName] = $this->createAndHydrate($property->className, $value);
+            // First start with complex types.
+            foreach ($property->nativeTypes as $phpType) {
+                if (!\class_exists($phpType)) {
+                    continue;
+                }
+                if (!\is_array($value)) {
+                    throw new CannotHydrateValueError(\sprintf("Property %s::$%s cannot hydrate an object from a non array value.", $property->className, $property->name));
+                }
+                $values[$propertyName] = $this->createAndHydrate($phpType, $value);
+                break;
             }
+
+            // Then, allow primitive types to be treated as well.
 
             /*
             throw new \InvalidArgumentException(\sprintf(
@@ -119,33 +146,6 @@ final class DeepHydrator implements Hydrator
         return $values;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function hydrate(object $object, array $values): void
-    {
-        $className = \get_class($object);
-
-        $this->hydrator->hydrate(
-            $this->hydrateValues($className, $values),
-            $object
-        );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function createAndHydrate(string $className, array $values): object
-    {
-        return $this->hydrator->createAndHydrate(
-            $className,
-            $this->hydrateValues($className, $values)
-        );
-    }
-
-    /**
-     * Process nested object hydration
-     */
     private function extractValues(string $className, array $values): array
     {
         $hydrationPlan = $this->getHydrationPlan($className);
@@ -162,36 +162,20 @@ final class DeepHydrator implements Hydrator
         foreach ($hydrationPlan->getProperties() as $property) {
             \assert($property instanceof HydratedProperty);
 
-            $propertyName = $property->name;
-
-            if (null === ($value = $values[$propertyName] ?? null)) {
+            if (null === ($value = $values[$property->name] ?? null)) {
                 continue;
             }
 
-            if ($this->classBlacklist->isBlacklisted($property->className)) {
-                continue;
-            }
-
-            // Skip properties that don't have the rightful type, this
-            // could be because the hydration plan is wrong.
-            if ($value instanceof $property->className) {
-                $values[$propertyName] = $this->extract($value);
+            foreach ($property->nativeTypes as $phpType) {
+                if ($this->classBlacklist->isBlacklisted($phpType)) {
+                    continue;
+                }
+                if ($value instanceof $phpType) {
+                    $values[$property->name] = $this->extract($value);
+                }
             }
         }
 
         return $values;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function extract(object $object): array
-    {
-        $className = \get_class($object);
-
-        return $this->extractValues(
-            $className,
-            $this->hydrator->extract($object)
-        );
     }
 }

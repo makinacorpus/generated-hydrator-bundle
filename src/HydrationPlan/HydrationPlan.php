@@ -20,22 +20,51 @@ declare(strict_types=1);
 
 namespace GeneratedHydrator\Bridge\Symfony\HydrationPlan;
 
-interface HydrationPlan
+use GeneratedHydrator\Bridge\Symfony\Error\PropertyDoesNotExistError;
+
+class HydrationPlan
 {
-    /**
-     * Get class name this hydration plan is for.
-     */
-    public function getClassName(): string;
+    private string $className;
+    /** @var HydratedProperty[] */
+    private array $properties = [];
+    /** @var array<string,string> */
+    private array $index = [];
 
-    /**
-     * Does this hydration plan contains anything?
-     */
-    public function isEmpty(): bool;
+    public function __construct(string $className, iterable $properties)
+    {
+        $this->className = $className;
 
-    /**
-     * Get property list to hydrate.
-     *
-     * @return HydratedProperty[]
-     */
-    public function getProperties(): array;
+        foreach ($properties as $key => $property) {
+            if (!$property instanceof HydratedProperty) {
+                throw new \InvalidArgumentException(\sprintf("value '%s' is not an instance of '%s'", $key, HydratedProperty::class));
+            }
+            $this->properties[$property->name] = $property;
+            $this->index[$property->alias] = $property->name;
+        }
+    }
+
+    public function getClassName(): string
+    {
+        return $this->className;
+    }
+
+    public function isEmpty(): bool
+    {
+        return empty($this->properties);
+    }
+
+    public function getProperty(string $name): HydratedProperty
+    {
+        return $this->properties[$name] ?? throw new PropertyDoesNotExistError(\sprintf("Property '%s::$%s' does not exist.", $this->className, $name));
+    }
+
+    public function getPropertyWithAlias(string $alias): HydratedProperty
+    {
+        return $this->properties[$this->index[$alias]] ?? throw new PropertyDoesNotExistError(\sprintf("Property of '%s' with alias '%s' does not exist.", $this->className, $alias));
+    }
+
+    public function getProperties(): array
+    {
+        return $this->properties;
+    }
 }

@@ -73,11 +73,6 @@ final class DefaultHydratorTest extends TestCase
         self::assertSame('bar', $object->getProperty2());
     }
 
-    public function testSimpleClassHydrationWithPsr4ModePerConfiguration(): void
-    {
-        self::markTestIncomplete();
-    }
-
     public function testSimpleClassHydrationWithWithCustomConfiguration(): void
     {
         self::markTestIncomplete();
@@ -139,11 +134,6 @@ final class DefaultHydratorTest extends TestCase
         self::assertSame(13, $object3->getProperty0());
         self::assertSame(19, $object3->getProperty1());
         self::assertNull($object3->getProperty2());
-    }
-
-    public function testSimpleClassExtractionWithPsr4ModePerConfiguration(): void
-    {
-        self::markTestIncomplete();
     }
 
     public function testSimpleClassExtractionWithWithCustomConfiguration(): void

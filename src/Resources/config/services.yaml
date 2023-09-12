@@ -25,7 +25,7 @@ services:
 
     generated_hydrator.class_black_list:
         public: false
-        class: GeneratedHydrator\Bridge\Symfony\Utils\ClassBlacklist
+        class: GeneratedHydrator\Bridge\Symfony\ClassBlacklist
 
     # Default hydrator implementation
     generated_hydrator.default:

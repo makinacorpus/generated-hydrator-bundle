@@ -29,20 +29,10 @@ final class CachedHydrationPlanBuilder implements HydrationPlanBuilder
 {
     const KEY_PREFIX = 'genhydplan-';
 
-    /** @var HydrationPlanBuilder */
-    private $decorated;
-
-    /** @var CacheItemPoolInterface */
-    private $pool;
-
-    /**
-     * Default constructor
-     */
-    public function __construct(HydrationPlanBuilder $decorated, CacheItemPoolInterface $pool)
-    {
-        $this->decorated = $decorated;
-        $this->pool = $pool;
-    }
+    public function __construct(
+        private HydrationPlanBuilder $decorated,
+        private CacheItemPoolInterface $pool
+    ) {}
 
     /**
      * {@inheritdoc}

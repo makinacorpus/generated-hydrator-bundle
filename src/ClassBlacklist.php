@@ -18,7 +18,7 @@
 
 declare(strict_types=1);
 
-namespace GeneratedHydrator\Bridge\Symfony\Utils;
+namespace GeneratedHydrator\Bridge\Symfony;
 
 class ClassBlacklist
 {
