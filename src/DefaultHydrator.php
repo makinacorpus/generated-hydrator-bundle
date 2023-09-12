@@ -52,12 +52,14 @@ final class DefaultHydrator implements Hydrator
     private function getHydratorConfiguration(string $className): Configuration
     {
         $userConfiguration = \array_replace([
-            'mode' => $this->defaultMode,
             'auto_generate_proxies' => true,
-            'class_name' => null,
             'class_namespace' => null,
             'target_dir' => $this->generatedClassesTargetDir,
         ], $this->userConfiguration[$className] ?? []);
+
+        if (!\is_dir($userConfiguration['target_dir'])) {
+            \mkdir($userConfiguration['target_dir']);
+        }
 
         $configuration = new Configuration($className);
         $configuration->setGeneratedClassesTargetDir($userConfiguration['target_dir']);
@@ -65,9 +67,6 @@ final class DefaultHydrator implements Hydrator
         // Let those values override the default one above.
         if ($value = ($userConfiguration['auto_generate_proxies'] ?? null)) {
             $configuration->setAutoGenerateProxies($value);
-        }
-        if ($value = ($userConfiguration['class_name'] ?? null)) {
-            $configuration->setHydratedClassName($value);
         }
         if ($value = ($userConfiguration['class_namespace'] ?? null)) {
             $this->configuration->setGeneratedClassesNamespace($value);
