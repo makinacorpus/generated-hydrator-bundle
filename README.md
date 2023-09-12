@@ -1,7 +1,17 @@
-# ocramius/generated-hydrator Symfony 4.4, 5.x bundle
+# ocramius/generated-hydrator Symfony >=6.x bundle
 
 Integrates [ocramius/generated-hydrator](https://github.com/Ocramius/GeneratedHydrator)
 library with Symfony.
+
+It also brings some new features:
+
+ - A nested hydrator, that from PHP properties type will cascade hydration
+   into an object graph.
+
+ - Value hydrators, for each PHP type you can plug your own global hydrator
+   implementation for dealing with custom types.
+
+ - Next planned feature will be object configuration using attributes.
 
 
 # Installation
@@ -26,29 +36,77 @@ return [
 
 # Configuration
 
-Per default, this bundle will configure the hydrator generator to write
-hydrator classes under your `src/` directory, for example, the  `App\\Entity\User`
-class will have the following hydrator: `App\\Hydrator\\Entity\UserHydrator`,
-written in the `src/Hydrator/Entity/UserHydrator.php` file.
+## Change generated PHP file location
 
-In order to change the naming strategy, copy-paste the
-`src/Resources/config/packages/generated-hydrator.yaml` from this package in your
-project's `config/packages/` directory, and edit the following lines:
+Default configuration will attempt to write generated hydrator code into the
+`%kernel.project_dir%/hydrator` folder. For this to work, you probably want to
+add in your `composer.json` file:
+
+```json
+{
+    "autoload": {
+        "classmap": [
+            "hydrator"
+        ]
+    }
+}
+```
+
+You can change the target by adding the following
+`config/packages/generated-hydrator.yaml` file:
 
 ```yaml
 generated_hydrator:
-    # ...
-    psr4_namespace_prefix: App
-    psr4_namespace_infix: Hydrator
+    target_directory: "%kernel.project_dir%/hydrator"
 ```
 
- - `psr4_namespace_prefix` is your application namespace, it could be anything
-   such as `YourVendor\YourApplication` as long as matches one of the PSR-4 entries
-   in your `composer.json` file's `autoload` section,
+## Blacklist classes from hydration
 
- - `psr4_namespace_infix` is the sub-namespace in which the generated classe will
-   be, please note that if you set it to `null`, generated hydrator classes will
-   be written in the same folder as their corresponding entities.
+You may experience bugs at some point when the hydrator attempts for example
+to hydrate PHP core classes. In order to avoid this from happening, you can
+completely disable hydration attempts on any PHP type, by using the following
+configuration:
+
+```yaml
+generated_hydrator:
+    class_blacklist:
+        - App\SomeClass
+        - DateTime
+        - DateTimeImmutable
+        - DateTimeInterface
+        - Ramsey\Uuid\Uuid
+        - Ramsey\Uuid\UuidInterface
+        # ...
+```
+
+This will prevent the nested object hydrator from those classes hydration
+attempt.
+
+
+## Pre-generate class hydrators for production
+
+You can setup a list of class for which you need to pre-generate hydrators:
+
+```yaml
+generated_hydrator:
+    class_list:
+        - App\Entity\Foo
+        - App\Entity\Bar
+        # ...
+```
+
+This will allow the `generated-hydrator:generate` command to pre-generate
+all hydrators.
+
+
+# Autowiring
+
+You can use the `GeneratedHydrator\Bridge\Symfony\HydratorAware` interface
+and set it on services, which will make this bundle autoconfigure the
+service injection for you.
+
+You can also use the `GeneratedHydrator\Bridge\Symfony\HydratorAwareTrait`
+if you don't want to implement the `setObjectHydrator()` method by yourself.
 
 
 # Usage
@@ -99,19 +157,18 @@ function some_function(Hydrator $hydrator)
 
 # Some notes
 
- - we added a recursive nested object hydrator, it uses PHP >= 7.4 type declaration
-   to lookup which classes to instantiate and hydrate for nested properties,
+For the nested hydrator to work, it needs to be able to use introspection
+on you classes for finding the properties types.
 
- - if you cannot use PHP >= 7.4, consider adding `symfony/property-info` dependency
-   for nested property type lookup (it is slow, but it works).
+If for some reason introspection fails, you can explicitely install
+the `symfony/property-access` component, which may find some types that this
+API is unable to find using reflection.
 
 
 # Roadmap
 
 Reach alpha release (mandatory):
 
- - [x] implement PSR-4 class name and file name generator,
- - [x] switch to PSR-4 per default,
  - [x] implement class blacklist, some classes such as `\DateTime` and `\Ramsey\Uuid\`
    should be dealt as terminal types, and normalized in the business layer,
  - [ ] autoload classes when they are just generated,
