@@ -3,12 +3,13 @@ parameters:
 
 services:
 
-    # Only existing implementation for now
+    generated_hydrator.value_hydrator_registry:
+        class: GeneratedHydrator\Bridge\Symfony\ValueHydrator\ValueHydratorRegistry
+        arguments: [[]] # Populated by a compiler pass.
+
     generated_hydrator.hydration_plan_builder.reflection:
         public: false
         class: GeneratedHydrator\Bridge\Symfony\HydrationPlan\ReflectionHydrationPlanBuilder
-
-    # This might be replaced by a chain implementation
     generated_hydrator.hydration_plan_builder.default:
         alias: generated_hydrator.hydration_plan_builder.reflection
 
@@ -27,31 +28,25 @@ services:
         public: false
         class: GeneratedHydrator\Bridge\Symfony\ClassBlacklist
 
-    # Default hydrator implementation
     generated_hydrator.default:
         public: false
         class: GeneratedHydrator\Bridge\Symfony\DefaultHydrator
-        arguments: ["%kernel.cache_dir%/generated-hydrator"]
-
-    # Deep hydrator implementation
+        arguments: ["%kernel.cache_dir%/hydrator"]
     generated_hydrator.deep:
         public: false
         class: GeneratedHydrator\Bridge\Symfony\DeepHydrator
-        arguments: ["@generated_hydrator.default", '@generated_hydrator.hydration_plan_builder', '@generated_hydrator.class_black_list']
-
-    # Main public facade, please use this service for injection.
+        arguments:
+            - "@generated_hydrator.default"
+            - "@generated_hydrator.hydration_plan_builder"
+            - "@generated_hydrator.class_black_list"
+            - "@generated_hydrator.value_hydrator_registry"
     generated_hydrator:
         alias: generated_hydrator.deep
-
-    # Alias for argument resolvers
     GeneratedHydrator\Bridge\Symfony\DeepHydrator:
         alias: generated_hydrator.deep
-
-    # Alias for argument resolvers
     GeneratedHydrator\Bridge\Symfony\Hydrator:
         alias: generated_hydrator
 
-    # Generate command
     generated_hydrator.command.generate:
         public: false
         class: GeneratedHydrator\Bridge\Symfony\Command\GenerateCommand

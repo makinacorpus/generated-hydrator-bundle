@@ -21,10 +21,12 @@ declare(strict_types=1);
 namespace GeneratedHydrator\Bridge\Symfony;
 
 use GeneratedHydrator\Bridge\Symfony\Error\CannotHydrateValueError;
+use GeneratedHydrator\Bridge\Symfony\Error\ValueHydratorDoesNotExistError;
 use GeneratedHydrator\Bridge\Symfony\HydrationPlan\HydratedProperty;
 use GeneratedHydrator\Bridge\Symfony\HydrationPlan\HydrationPlan;
 use GeneratedHydrator\Bridge\Symfony\HydrationPlan\HydrationPlanBuilder;
 use GeneratedHydrator\Bridge\Symfony\HydrationPlan\ReflectionHydrationPlanBuilder;
+use GeneratedHydrator\Bridge\Symfony\ValueHydrator\ValueHydratorRegistry;
 
 /**
  * Use hydration plan to hydrated nested/deep objects graphs.
@@ -34,6 +36,7 @@ final class DeepHydrator implements Hydrator
     private ClassBlacklist $classBlacklist;
     private Hydrator $decorated;
     private HydrationPlanBuilder $hydrationPlanBuilder;
+    private ?ValueHydratorRegistry $valueHydratorRegistry = null;
     /** @var array<string, HydrationPlan> */
     private array $hydrationPlan = [];
 
@@ -41,10 +44,12 @@ final class DeepHydrator implements Hydrator
         Hydrator $decorated,
         ?HydrationPlanBuilder $hydrationPlanBuilder = null,
         ?ClassBlacklist $classBlacklist = null,
+        ?ValueHydratorRegistry $valueHydratorRegistry = null,
     ) {
         $this->decorated = $decorated;
         $this->hydrationPlanBuilder = $hydrationPlanBuilder ?? new ReflectionHydrationPlanBuilder();
         $this->classBlacklist = $classBlacklist ?? new ClassBlacklist();
+        $this->valueHydratorRegistry = $valueHydratorRegistry;
     }
 
     /**
@@ -91,6 +96,7 @@ final class DeepHydrator implements Hydrator
         foreach ($hydrationPlan->getProperties() as $property) {
             \assert($property instanceof HydratedProperty);
 
+            $converted = false;
             $isTypeCompatible = false;
             $propertyName = $property->name;
 
@@ -98,20 +104,30 @@ final class DeepHydrator implements Hydrator
                 continue;
             }
 
+            $valueIsObject = \is_object($value);
+
             if ($this->classBlacklist->isBlacklisted($property->className)) {
                 continue;
             }
 
             foreach ($property->nativeTypes as $phpType) {
-                if ($value instanceof $phpType) {
+                if (\get_debug_type($value) === $phpType || ($valueIsObject && $value instanceof $phpType)) {
                     // Property is already an object with the right class, let it
                     // pass gracefully the caller already has hydrated the object.
                     $isTypeCompatible = true;
                     break;
                 }
+
+                if ($this->valueHydratorRegistry && $this->valueHydratorRegistry->hasValueHydrator($phpType)) {
+                    try {
+                        $values[$propertyName] = $this->valueHydratorRegistry->getValueHydrator($phpType)->hydrate($phpType, $value);
+                        $converted = true;
+                        break;
+                    } catch (ValueHydratorDoesNotExistError|CannotHydrateValueError) {}
+                }
             }
 
-            if ($isTypeCompatible) {
+            if ($converted || $isTypeCompatible) {
                 continue;
             }
 
