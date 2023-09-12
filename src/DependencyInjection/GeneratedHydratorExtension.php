@@ -56,6 +56,7 @@ final class GeneratedHydratorExtension extends Extension
     {
         $container
             ->getDefinition('generated_hydrator.default')
+            ->setArgument(0, $config['target_directory'])
             ->setArgument(1, []) // @todo User configuration
         ;
     }
